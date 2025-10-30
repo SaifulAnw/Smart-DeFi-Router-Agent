@@ -11,11 +11,13 @@
 ## 📋 Table of Contents
 
 - [Overview](#overview)
+- [Current Deployment Status](#current-deployment-status)
 - [PRD Implementation Status](#prd-implementation-status)
 - [Architecture](#architecture)
 - [Smart Contracts](#smart-contracts)
 - [Features](#features)
 - [Protocol Integrations](#protocol-integrations)
+- [Environment Variables](#environment-variables)
 - [Testing](#testing)
 - [Installation](#installation)
 - [Deployment](#deployment)
@@ -38,6 +40,33 @@ The **Smart DeFi Router Agent** is an AI-guided, non-custodial DeFi vault that a
 - 🛡️ **Security-First**: ReentrancyGuard, Pausable, access controls
 
 ---
+
+## 📡 Current Deployment Status
+
+Recent deployments to Arc Testnet (chainId: 5042002) via Foundry script are recorded under `broadcast/DeploySmartDeFiRouter.s.sol/5042002/run-latest.json`.
+
+Example latest deployment log (abridged):
+
+```
+Router:        0x432cBFd73C988FfCA30b223AF51Ae8f71e88513c
+AaveAdapter:   0x2318eaBdfaA68B130aa37741403B001F25c1f6F5
+ArcAdapter:    0x57E1935e4Dc7362B8599dc89835b588B0c4EDA0f
+Keeper:        0x159683057c295241e0Dbf70137E0566fe62C5c7C
+USDC:          0x3600000000000000000000000000000000000000  (placeholder)
+AAVE_POOL:     0x0000000000000000000000000000000000000000  (unset)
+AAVE_DATAPROV: 0x0000000000000000000000000000000000000000  (unset)
+CCTP_MESSENGR: 0x2B4069517957735C6C1C727E637490a3a9C850a6
+CCTP_XMITTER:  0x499A6a1A63A69B0D77A18e71F98F0E5B26f4b83f
+```
+
+Notes:
+- `USDC` is currently a placeholder; set this to a real/mock 6‑decimals ERC20 on Arc testnet before deposits.
+- `AAVE_POOL` and `AAVE_DATA_PROVIDER` are unset; provide valid endpoints (or mocks) for the `AaveAdapter` to operate.
+- All deployment artifacts are reproducible from the `broadcast/` JSON files.
+
+Broadcast hygiene:
+- It’s okay to commit `broadcast/` (useful for auditability). Do not commit `cache/`.
+- Example `.gitignore` entries already exclude `cache/` and local dry-runs.
 
 ## ✅ PRD Implementation Status
 
@@ -228,6 +257,33 @@ interface IProtocolAdapter {
 
 ---
 
+## 🔧 Environment Variables
+
+Set these in your shell or `.env` before running scripts:
+
+Required (Arc testnet):
+```
+ARC_TESTNET_RPC_URL= https://rpc.testnet.arc.network
+ARC_PRIVATE_KEY=     0x...
+ARC_WALLET_ADDRESS=  0x...     # keeper/owner as needed
+
+USDC_ARC=            0x...     # real/mock ERC20 (6 decimals)
+AAVE_POOL=           0x...     # required for AaveAdapter
+AAVE_DATA_PROVIDER=  0x...     # required for AaveAdapter
+
+CCTP_TOKEN_MESSENGER=        0x2B4069517957735C6C1C727E637490a3a9C850a6
+CCTP_MESSAGE_TRANSMITTER=    0x499A6a1A63A69B0D77A18e71F98F0E5B26f4b83f
+
+# Optional if using Arc Protocol adapter
+ARC_PROTOCOL=        0x...
+```
+
+Verification tips:
+```
+cast code $USDC_ARC --rpc-url $ARC_TESTNET_RPC_URL          # non-empty bytecode
+cast call $USDC_ARC "decimals()(uint8)" --rpc-url $ARC_TESTNET_RPC_URL   # expect 6
+```
+
 ## 🧪 Testing
 
 ### Test Suite
@@ -357,6 +413,12 @@ forge script script/DeploySmartDeFiRouter.s.sol:DeploySmartDeFiRouter \
     -vvvv
 ```
 
+After deployment:
+```
+cast call $ROUTER "getTotalValueLocked()(uint256)" --rpc-url $ARC_TESTNET_RPC_URL
+cast call $ROUTER "keeper()(address)"            --rpc-url $ARC_TESTNET_RPC_URL
+```
+
 ### Deployment Script
 
 The deployment script (`script/DeploySmartDeFiRouter.s.sol`) will:
@@ -379,6 +441,11 @@ cast call $ROUTER_ADDRESS "getRegisteredProtocols()(address[])" --rpc-url $ARC_T
 # Check keeper address
 cast call $ROUTER_ADDRESS "keeper()(address)" --rpc-url $ARC_TESTNET_RPC_URL
 ```
+
+Common pitfalls:
+- Function signatures must use `uint256` (not `unit256`).
+- `cast code <addr>` requires the address argument and `--rpc-url`.
+- Env variables passed to `vm.envAddress("...")` must be 42‑char `0x...` strings; empty values will revert.
 
 ---
 
