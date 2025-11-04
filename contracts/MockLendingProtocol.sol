@@ -1,58 +1,68 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
-
-// Standard ERC20 Interface for USDC interaction
-interface IERC20 {
-    function transfer(address recipient, uint256 amount) external returns (bool);
-    function balanceOf(address account) external view returns (uint256);
-}
+pragma solidity ^0.8.20;
 
 // ====================================================================
-// MOCK LENDING PROTOCOL
+// MOCK LENDING PROTOCOL (ACCOUNTING-ONLY VERSION)
+// - Directly compatible with RouterAgentV2 (deposit/withdraw do NOT
+//   perform actual USDC token transfers; only internal accounting).
+// - Suitable for quick demos: Router holds USDC, this protocol
+//   only tracks "who owns how much".
 // ====================================================================
 
 contract MockLendingProtocol {
-    // Contract that represents the RouterAgent
-    address public immutable ROUTER_AGENT;
-
-    // Address of the USDC contract
-    IERC20 public immutable USDC;
+    // Stores "virtual" user balances in this protocol
+    mapping(address => uint256) public balances;
     
-    // Tracks the simulated balance for each user (their share of the pool)
-    mapping(address => uint256) public stakedBalances; 
-
-    // Constructor: Needs to know who the RouterAgent is and the USDC address
-    constructor(address _routerAgent, address _usdcAddress) {
-        ROUTER_AGENT = _routerAgent;
-        USDC = IERC20(_usdcAddress);
+    // Total "virtual" funds recorded in this protocol
+    uint256 public totalAssets;
+    
+    // Optional: label/name for easy identification in events/logs
+    string public name;
+    
+    // Events for transparency during deposit/withdraw
+    event MockDeposit(address indexed user, uint256 amount, uint256 newUserBalance, uint256 newTotalAssets);
+    event MockWithdraw(address indexed user, uint256 amount, uint256 newUserBalance, uint256 newTotalAssets);
+    
+    // Constructor: set protocol label (e.g., "Protocol A")
+    constructor(string memory _name) {
+        name = _name; // store protocol name for information
     }
-
-    // Simulates receiving funds from the RouterAgent for a specific user
+    
+    // ----------------------------------------------------------------
+    // Virtual deposit function:
+    // - Called by RouterAgentV2
+    // - Records increase in user balance & totalAssets
+    // - Does not pull actual USDC tokens (as per MVP)
+    // ----------------------------------------------------------------
     function deposit(address user, uint256 amount) external {
-        // ONLY the RouterAgent can call this function
-        require(msg.sender == ROUTER_AGENT, "MockProtocol: Only RouterAgent allowed");
-
-        // 1. Transfer USDC from RouterAgent to MockProtocol
-        // Note: For simplicity, we skip the transfer and just update state, 
-        // assuming RouterAgent already has the USDC (which it does).
+        require(user != address(0), "USER_0");            // ensure valid user address
+        require(amount > 0, "AMOUNT_0");                  // ensure amount > 0
         
-        // 2. Update state: user's staked balance increases
-        stakedBalances[user] += amount;
+        balances[user] += amount;                         // increase user virtual balance
+        totalAssets += amount;                            // increase protocol total "assets"
+        
+        emit MockDeposit(user, amount, balances[user], totalAssets); // log event for debugging
     }
-
-    // Simulates returning funds to the RouterAgent
+    
+    // ----------------------------------------------------------------
+    // Virtual withdraw function:
+    // - Called by RouterAgentV2
+    // - Reduces user balance & totalAssets
+    // - Actual USDC tokens are sent by Router, not by this protocol
+    // ----------------------------------------------------------------
     function withdraw(address user, uint256 amount) external {
-        // ONLY the RouterAgent can call this function
-        require(msg.sender == ROUTER_AGENT, "MockProtocol: Only RouterAgent allowed");
+        require(user != address(0), "USER_0");            // ensure valid user address
+        require(amount > 0, "AMOUNT_0");                  // ensure amount > 0
+        require(balances[user] >= amount, "INSUFFICIENT");// check sufficient virtual balance
         
-        // 1. Check if the user has enough staked balance
-        require(stakedBalances[user] >= amount, "MockProtocol: Insufficient staked balance");
-
-        // 2. Update state: user's staked balance decreases
-        stakedBalances[user] -= amount;
-
-        // 3. Transfer USDC from MockProtocol back to RouterAgent
-        // In a real scenario, the protocol would return the principal + interest.
-        require(USDC.transfer(ROUTER_AGENT, amount), "MockProtocol: USDC return failed");
+        balances[user] -= amount;                         // decrease user virtual balance
+        totalAssets -= amount;                            // decrease protocol total "assets"
+        
+        emit MockWithdraw(user, amount, balances[user], totalAssets); // log event
+    }
+    
+    // Helper: view user balance
+    function balanceOf(address user) external view returns (uint256) {
+        return balances[user];                            // return user virtual balance
     }
 }

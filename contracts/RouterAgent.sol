@@ -1,156 +1,234 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.20;
 
 // ====================================================================
 // INTERFACES
 // ====================================================================
 
-// Standard ERC20 Interface for USDC interaction
+// Minimal ERC20 interface for USDC interaction
 interface IERC20 {
     function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
     function transfer(address recipient, uint256 amount) external returns (bool);
     function balanceOf(address account) external view returns (uint256);
 }
 
-// Interface for the simulated DeFi Protocols (Protocol A and B)
+// Interface for mock lending protocols (Protocol A, B, etc.)
 interface IMockLendingProtocol {
     function deposit(address user, uint256 amount) external;
     function withdraw(address user, uint256 amount) external;
 }
 
+// Simple ReentrancyGuard (prevents reentrancy attacks)
+abstract contract ReentrancyGuard {
+    uint256 private constant _ENTERED = 1;
+    uint256 private constant _NOT_ENTERED = 2;
+    uint256 private _status = _NOT_ENTERED;
 
-contract RouterAgent {
+    modifier nonReentrant() {
+        require(_status != _ENTERED, "REENTRANCY");
+        _status = _ENTERED;
+        _;
+        _status = _NOT_ENTERED;
+    }
+}
+
+// ====================================================================
+// MAIN CONTRACT
+// ====================================================================
+
+contract RouterAgentV2 is ReentrancyGuard {
     // ====================================================================
-    // 1. STATE VARIABLES & SECURITY SETUP
+    // 1. STATE VARIABLES & ACCESS CONTROL
     // ====================================================================
 
-    IERC20 public immutable USDC;
-    address public keeperAddress;
+    IERC20 public immutable USDC;          // USDC token used
+    address public keeperAddress;          // keeper address (AI backend)
+    address public owner;                  // main admin (contract owner)
 
-    // Maps user address to their total USDC balance managed by the agent
+    // Stores user balances managed by RouterAgent
     mapping(address => uint256) public userBalances;
 
-    // Maps user address to the ID of the protocol where their funds are currently staked
-    // (1 = Protocol A, 2 = Protocol B, 0 = Not staked)
+    // Stores protocol ID where user funds are currently staked
     mapping(address => uint8) public userCurrentProtocol;
-    
-    // Addresses of the protocols the agent can route to
-    address public protocolA;
-    address public protocolB;
 
-    // Modifier: Only the registered keeper (AI Backend) can execute
+    // Stores list of allowed protocols (id → address)
+    mapping(uint8 => address) public protocols;
+
+    // ====================================================================
+    // 2. EVENTS
+    // ====================================================================
+
+    event Deposited(address indexed user, uint256 amount, uint8 protocolId);
+    event Withdrawn(address indexed user, uint256 amount, uint8 protocolId);
+    event Rebalanced(address indexed user, uint8 fromId, uint8 toId, uint256 amount);
+    event KeeperUpdated(address indexed oldKeeper, address indexed newKeeper);
+    event ProtocolUpdated(uint8 indexed id, address indexed oldAddr, address indexed newAddr);
+    event OwnerUpdated(address indexed oldOwner, address indexed newOwner);
+
+    // ====================================================================
+    // 3. MODIFIERS
+    // ====================================================================
+
+    // Only registered keeper can execute certain functions
     modifier onlyKeeper() {
-        require(msg.sender == keeperAddress, "RouterAgent: Caller is not the registered keeper");
+        require(msg.sender == keeperAddress, "NOT_KEEPER");
+        _;
+    }
+
+    // Only contract owner can change important configurations
+    modifier onlyOwner() {
+        require(msg.sender == owner, "NOT_OWNER");
         _;
     }
 
     // ====================================================================
-    // 2. CONSTRUCTOR
+    // 4. CONSTRUCTOR
     // ====================================================================
 
-    constructor(address _usdcAddress, address _initialKeeper, address _protocolA, address _protocolB) {
-        USDC = IERC20(_usdcAddress);
+    constructor(address _usdc, address _initialKeeper, address _owner) {
+        // Validate required inputs
+        require(_usdc != address(0), "USDC_0");
+        require(_initialKeeper != address(0), "KEEPER_0");
+        require(_owner != address(0), "OWNER_0");
+
+        // Initialize variables
+        USDC = IERC20(_usdc);
         keeperAddress = _initialKeeper;
-        protocolA = _protocolA;
-        protocolB = _protocolB;
-        // The Keeper address will typically be a multi-sig or a dedicated smart contract
+        owner = _owner;
+
+        // Emit initial setup events
+        emit KeeperUpdated(address(0), _initialKeeper);
+        emit OwnerUpdated(address(0), _owner);
     }
 
     // ====================================================================
-    // 3. USER FACING FUNCTIONS
+    // 5. OWNER FUNCTIONS (CONTRACT MANAGEMENT)
     // ====================================================================
 
-    function depositUSDC(uint256 amount) public {
-        require(amount > 0, "RouterAgent: Deposit amount must be greater than 0");
-        
-        // 1. Transfer USDC from user to RouterAgent contract
-        require(USDC.transferFrom(msg.sender, address(this), amount), "RouterAgent: USDC transfer failed");
-        
-        // 2. Update user's recorded balance
+    // Update keeper address
+    function setKeeper(address _keeper) external onlyOwner {
+        require(_keeper != address(0), "KEEPER_0");
+        emit KeeperUpdated(keeperAddress, _keeper);
+        keeperAddress = _keeper;
+    }
+
+    // Register or update a new protocol
+    function setProtocol(uint8 id, address addr) external onlyOwner {
+        require(id != 0, "ID_0");
+        require(addr != address(0), "ADDR_0");
+        emit ProtocolUpdated(id, protocols[id], addr);
+        protocols[id] = addr;
+    }
+
+    // ====================================================================
+    // 6. USER FUNCTIONS (DEPOSIT & WITHDRAW)
+    // ====================================================================
+
+    // Deposit USDC from user to RouterAgent, then forward to protocol
+    function depositUSDC(uint256 amount) external nonReentrant {
+        require(amount > 0, "AMOUNT_0");
+
+        // 1. Transfer USDC from user to contract
+        require(USDC.transferFrom(msg.sender, address(this), amount), "XFER_FROM_FAIL");
+
+        // 2. Add amount to user balance mapping
         userBalances[msg.sender] += amount;
 
-        // 3. If the user is new or not staked, route the initial deposit (to Protocol A by default)
-        if (userCurrentProtocol[msg.sender] == 0) {
-            _routeInitialDeposit(msg.sender, amount);
+        // 3. Determine where funds will be sent (new or existing protocol)
+        uint8 cur = userCurrentProtocol[msg.sender];
+        if (cur == 0) {
+            // If new user, default to protocol id = 1
+            require(protocols[1] != address(0), "PROTO1_0");
+            IMockLendingProtocol(protocols[1]).deposit(msg.sender, amount);
+            userCurrentProtocol[msg.sender] = 1;
+            emit Deposited(msg.sender, amount, 1);
         } else {
-            // For simplicity in MVP, assume new deposit goes to the current protocol
-            _routeToProtocol(userCurrentProtocol[msg.sender], amount);
+            // If already has active protocol, add there
+            address p = _getProtocolAddress(cur);
+            IMockLendingProtocol(p).deposit(msg.sender, amount);
+            emit Deposited(msg.sender, amount, cur);
         }
     }
 
-    function withdrawUSDC(uint256 amount) public {
-        require(amount > 0, "RouterAgent: Withdraw amount must be greater than 0");
-        require(userBalances[msg.sender] >= amount, "RouterAgent: Insufficient balance");
+    // Withdraw USDC from protocol to user
+    function withdrawUSDC(uint256 amount) external nonReentrant {
+        require(amount > 0, "AMOUNT_0");
+        require(userBalances[msg.sender] >= amount, "INSUFFICIENT");
 
-        // 1. Update user balance state
+        // 1. Reduce user balance
         userBalances[msg.sender] -= amount;
 
-        // 2. Internally withdraw the amount from the current staked protocol
-        uint8 currentId = userCurrentProtocol[msg.sender];
-        address currentProtocol = _getProtocolAddress(currentId);
-        
-        // The protocol withdraws from its internal state and sends the USDC back to RouterAgent
-        IMockLendingProtocol(currentProtocol).withdraw(msg.sender, amount); 
-        
-        // 3. Transfer USDC from RouterAgent to the user
-        require(USDC.transfer(msg.sender, amount), "RouterAgent: Final USDC transfer failed");
-        
-        // Note: For simplicity, userCurrentProtocol is only set to 0 when balance hits zero.
+        // 2. Get protocol id & address where user funds are located
+        uint8 curId = userCurrentProtocol[msg.sender];
+        address cur = _getProtocolAddress(curId);
+
+        // 3. Request protocol to withdraw funds back to RouterAgent
+        IMockLendingProtocol(cur).withdraw(msg.sender, amount);
+
+        // 4. Transfer USDC to user
+        require(USDC.transfer(msg.sender, amount), "XFER_FAIL");
+
+        // 5. If user balance is 0, reset their protocol
         if (userBalances[msg.sender] == 0) {
             userCurrentProtocol[msg.sender] = 0;
         }
+
+        // 6. Record event
+        emit Withdrawn(msg.sender, amount, curId);
     }
 
-
     // ====================================================================
-    // 4. KEEPER/AI EXECUTION FUNCTION (CORE REBALANCING LOGIC)
+    // 7. KEEPER FUNCTION (AI CONTROLLED REBALANCING)
     // ====================================================================
 
-    function executeRebalance(address user, uint8 newProtocolId) external onlyKeeper {
-        uint256 balance = userBalances[user];
-        require(balance > 0, "RouterAgent: User has no funds to rebalance");
-        
-        uint8 currentProtocolId = userCurrentProtocol[user];
-        require(currentProtocolId != newProtocolId, "RouterAgent: Already in target protocol");
+    // Core function to move funds between protocols (called by AI keeper)
+    function executeRebalance(address user, uint8 newProtocolId)
+        external
+        onlyKeeper
+        nonReentrant
+    {
+        // 1. Basic validation
+        require(user != address(0), "USER_0");
+        uint256 bal = userBalances[user];
+        require(bal > 0, "NO_FUNDS");
 
-        // 1. Get current and target protocol addresses
-        address currentProtocol = _getProtocolAddress(currentProtocolId);
-        address targetProtocol = _getProtocolAddress(newProtocolId);
+        // 2. Check old & new protocol
+        uint8 curId = userCurrentProtocol[user];
+        require(curId != newProtocolId, "SAME_PROTOCOL");
 
-        // 2. WITHDRAW: Pull all funds from the current protocol
-        // The Mock Protocol should transfer USDC back to the RouterAgent upon withdrawal
-        IMockLendingProtocol(currentProtocol).withdraw(user, balance); 
+        // 3. Get old and new protocol addresses
+        address fromP = _getProtocolAddress(curId);
+        address toP = _getProtocolAddress(newProtocolId);
 
-        // 3. DEPOSIT: Deposit all funds into the new protocol
-        IMockLendingProtocol(targetProtocol).deposit(user, balance);
+        // 4. Withdraw all funds from old protocol (to RouterAgent)
+        IMockLendingProtocol(fromP).withdraw(user, bal);
 
-        // 4. Update State: Record the new location of the user's funds
+        // 5. Deposit all funds to new protocol
+        IMockLendingProtocol(toP).deposit(user, bal);
+
+        // 6. Update user state mapping
         userCurrentProtocol[user] = newProtocolId;
+
+        // 7. Emit event for transparency
+        emit Rebalanced(user, curId, newProtocolId, bal);
     }
 
     // ====================================================================
-    // 5. INTERNAL HELPER FUNCTIONS
+    // 8. INTERNAL HELPER
     // ====================================================================
 
-    function _routeInitialDeposit(address user, uint256 amount) internal {
-        // Default routing upon first deposit: to Protocol A (ID: 1)
-        IMockLendingProtocol(protocolA).deposit(user, amount);
-        userCurrentProtocol[user] = 1; 
+    // Helper function to get protocol address from ID
+    function _getProtocolAddress(uint8 id) internal view returns (address) {
+        address p = protocols[id];
+        require(p != address(0), "PROTO_0");
+        return p;
     }
 
-    function _routeToProtocol(uint8 protocolId, uint256 amount) internal {
-        // Helper for routing subsequent deposits to the current protocol
-        address currentProtocol = _getProtocolAddress(protocolId);
-        IMockLendingProtocol(currentProtocol).deposit(msg.sender, amount);
-    }
-    
-    function _getProtocolAddress(uint8 protocolId) internal view returns (address) {
-        if (protocolId == 1) return protocolA;
-        if (protocolId == 2) return protocolB;
-        revert("RouterAgent: Invalid protocol ID");
-    }
+    // ====================================================================
+    // 9. SAFETY
+    // ====================================================================
 
-    // Fallback: Optional, ensures the contract can reject random ETH transfers (Arc L1 uses USDC for gas)
+    // Reject direct ETH transfers (Arc uses USDC as gas)
     receive() external payable {
         revert("RouterAgent: Cannot receive ETH directly");
     }

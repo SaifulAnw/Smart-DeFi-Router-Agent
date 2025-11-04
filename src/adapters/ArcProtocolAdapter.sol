@@ -15,7 +15,7 @@ interface IArcProtocol {
     function balanceOf(address account) external view returns (uint256);
     function totalAssets() external view returns (uint256);
     function totalShares() external view returns (uint256);
-    function getCurrentAPY() external view returns (uint256);
+    function getCurrentApy() external view returns (uint256);
 }
 
 /**
@@ -26,8 +26,8 @@ interface IArcProtocol {
 contract ArcProtocolAdapter is Ownable {
     
     IERC20 public immutable USDC;
-    IArcProtocol public immutable arcProtocol;
-    address public immutable router;
+    IArcProtocol public immutable ARC_PROTOCOL;
+    address public immutable ROUTER;
     
     event ArcDeposit(uint256 amount, uint256 shares, uint256 timestamp);
     event ArcWithdraw(uint256 amount, uint256 sharesBurned, uint256 timestamp);
@@ -36,8 +36,14 @@ contract ArcProtocolAdapter is Ownable {
     error DepositFailed();
     error WithdrawFailed();
     
+    // Add internal function
+    function _onlyRouter() internal view {
+        if (msg.sender != ROUTER) revert UnauthorizedCaller();
+    }
+
+    // Change modifiers
     modifier onlyRouter() {
-        if (msg.sender != router) revert UnauthorizedCaller();
+        _onlyRouter();
         _;
     }
     
@@ -47,29 +53,31 @@ contract ArcProtocolAdapter is Ownable {
         address _router
     ) Ownable(msg.sender) {
         USDC = IERC20(_usdc);
-        arcProtocol = IArcProtocol(_arcProtocol);
-        router = _router;
+        ARC_PROTOCOL = IArcProtocol(_arcProtocol);
+        ROUTER = _router;
     }
     
     /**
      * @notice Deploy USDC into Arc protocol
      * @param amount Amount to deposit
-     * @param data Additional protocol-specific data
      * @return success Whether deposit succeeded
      */
-    function deposit(uint256 amount, bytes calldata data) 
+    function deposit(uint256 amount, bytes calldata) 
         external 
         onlyRouter 
         returns (bool success) 
     {
         // Transfer USDC from router
-        USDC.transferFrom(msg.sender, address(this), amount);
-        
+        require(
+            USDC.transferFrom(msg.sender, address(this), amount), 
+            "ArcAdapter: transferFrom failed"
+        );
+                
         // Approve Arc protocol
-        USDC.approve(address(arcProtocol), amount);
+        USDC.approve(address(ARC_PROTOCOL), amount);
         
         // Stake in Arc protocol
-        uint256 shares = arcProtocol.stake(amount);
+        uint256 shares = ARC_PROTOCOL.stake(amount);
         
         emit ArcDeposit(amount, shares, block.timestamp);
         return true;
@@ -78,24 +86,26 @@ contract ArcProtocolAdapter is Ownable {
     /**
      * @notice Withdraw USDC from Arc protocol
      * @param amount Amount of USDC to withdraw
-     * @param data Additional protocol-specific data
      * @return success Whether withdrawal succeeded
      */
-    function withdraw(uint256 amount, bytes calldata data) 
+    function withdraw(uint256 amount, bytes calldata) 
         external 
         onlyRouter 
         returns (bool success) 
     {
         // Calculate shares needed
-        uint256 totalShares = arcProtocol.totalShares();
-        uint256 totalAssets = arcProtocol.totalAssets();
+        uint256 totalShares = ARC_PROTOCOL.totalShares();
+        uint256 totalAssets = ARC_PROTOCOL.totalAssets();
         uint256 sharesToBurn = (amount * totalShares) / totalAssets;
         
         // Unstake from Arc protocol
-        uint256 withdrawn = arcProtocol.unstake(sharesToBurn);
+        uint256 withdrawn = ARC_PROTOCOL.unstake(sharesToBurn);
         
         // Transfer USDC to router
-        USDC.transfer(router, withdrawn);
+        require(
+            USDC.transfer(ROUTER, withdrawn),
+            "ArcAdapter: transfer failed"
+        );
         
         emit ArcWithdraw(withdrawn, sharesToBurn, block.timestamp);
         return true;
@@ -106,9 +116,9 @@ contract ArcProtocolAdapter is Ownable {
      * @return balance Current value in USDC
      */
     function getBalance() external view returns (uint256 balance) {
-        uint256 shares = arcProtocol.balanceOf(address(this));
-        uint256 totalShares = arcProtocol.totalShares();
-        uint256 totalAssets = arcProtocol.totalAssets();
+        uint256 shares = ARC_PROTOCOL.balanceOf(address(this));
+        uint256 totalShares = ARC_PROTOCOL.totalShares();
+        uint256 totalAssets = ARC_PROTOCOL.totalAssets();
         
         if (totalShares == 0) return 0;
         
@@ -119,8 +129,8 @@ contract ArcProtocolAdapter is Ownable {
      * @notice Get current APY from Arc protocol
      * @return apy Current APY in basis points
      */
-    function getAPY() external view returns (uint256 apy) {
-        return arcProtocol.getCurrentAPY();
+    function getApy() external view returns (uint256 apy) {
+        return ARC_PROTOCOL.getCurrentApy();
     }
 }
 

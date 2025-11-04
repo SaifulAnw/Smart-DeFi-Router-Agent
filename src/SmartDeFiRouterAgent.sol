@@ -38,7 +38,7 @@ interface IProtocolAdapter {
      * @notice Get current APY from the protocol
      * @return apy Current annual percentage yield (in basis points)
      */
-    function getAPY() external view returns (uint256 apy);
+    function getApy() external view returns (uint256 apy);
 }
 
 /**
@@ -198,19 +198,31 @@ contract SmartDeFiRouterAgent is Ownable, ReentrancyGuard, Pausable {
     /**
      * @notice Restrict function to keeper only (Backend AI)
      */
-    modifier onlyKeeper() {
-        if (msg.sender != keeper) revert UnauthorizedKeeper();
-        _;
+    // Add an internal function for onlyKeeper()
+    function _onlyKeeper() internal view {
+    if (msg.sender != keeper) revert UnauthorizedKeeper();
     }
-    
+
+    // Change the onlyKeeper() modifier
+    modifier onlyKeeper() {
+    _onlyKeeper();
+    _;
+    }
+
     /**
      * @notice Validate protocol is registered
      */
-    modifier onlyRegisteredProtocol(address protocol) {
+    // Add internal function for onlyRegisteredProtocol()
+    function _onlyRegisteredProtocol(address protocol) internal view {
         if (!registeredProtocols[protocol]) revert InvalidProtocol();
+    }
+
+    // Change the onlyRegisteredProtocol() modifier
+    modifier onlyRegisteredProtocol(address protocol) {
+        _onlyRegisteredProtocol(protocol);
         _;
     }
-    
+        
     // ============ Constructor ============
     
     /**
@@ -242,7 +254,7 @@ contract SmartDeFiRouterAgent is Ownable, ReentrancyGuard, Pausable {
      * @param amount Amount of USDC to deposit
      * @dev Automatically deploys to current protocol
      */
-    function depositUSDC(uint256 amount) 
+    function depositUsdc(uint256 amount) 
         external 
         nonReentrant 
         whenNotPaused 
@@ -250,8 +262,11 @@ contract SmartDeFiRouterAgent is Ownable, ReentrancyGuard, Pausable {
         if (amount == 0) revert InvalidAmount();
         
         // Transfer USDC from user to contract
-        USDC.transferFrom(msg.sender, address(this), amount);
-        
+        require(
+            USDC.transferFrom(msg.sender, address(this), amount),
+            "Router: deposit transferFrom failed"
+        );
+                
         // Update user balance
         balances[msg.sender] += amount;
         totalDeposits += amount;
@@ -271,7 +286,7 @@ contract SmartDeFiRouterAgent is Ownable, ReentrancyGuard, Pausable {
      * @param amount Amount of USDC to withdraw
      * @dev Withdraws from current protocol and transfers to user
      */
-    function withdrawUSDC(uint256 amount) 
+    function withdrawUsdc(uint256 amount) 
         external 
         nonReentrant 
         whenNotPaused 
@@ -290,8 +305,11 @@ contract SmartDeFiRouterAgent is Ownable, ReentrancyGuard, Pausable {
         }
         
         // Transfer USDC to user
-        USDC.transfer(msg.sender, amount);
-        
+        require(
+            USDC.transfer(msg.sender, amount),
+            "Router: withdraw transfer failed"
+        );
+                
         emit Withdrawal(msg.sender, amount, balances[msg.sender], block.timestamp);
     }
     
@@ -431,7 +449,15 @@ contract SmartDeFiRouterAgent is Ownable, ReentrancyGuard, Pausable {
         if (cctpMessageTransmitter == address(0)) revert InvalidProtocol();
         
         // Generate attestation hash for replay protection
-        bytes32 attestationHash = keccak256(abi.encodePacked(message, attestation));
+        bytes32 attestationHash;
+        assembly {
+            // copy calldata 'message' into memory and hash it to prevent direct calldata access
+            let ptr := mload(0x40)
+            calldatacopy(ptr, message.offset, message.length)
+            attestationHash := keccak256(ptr, message.length)
+            // update free memory pointer (round up to 32 bytes)
+            mstore(0x40, add(ptr, and(add(message.length, 31), not(31))))
+        }
         
         if (processedAttestations[attestationHash]) {
             revert AttestationAlreadyProcessed();
@@ -518,7 +544,7 @@ contract SmartDeFiRouterAgent is Ownable, ReentrancyGuard, Pausable {
      * @param _tokenMessenger TokenMessenger address
      * @param _messageTransmitter MessageTransmitter address
      */
-    function configureCCTP(
+    function configureCctp(
         address _tokenMessenger,
         address _messageTransmitter
     ) external onlyOwner {
@@ -559,7 +585,10 @@ contract SmartDeFiRouterAgent is Ownable, ReentrancyGuard, Pausable {
      */
     function emergencyWithdraw(address token) external onlyOwner {
         uint256 balance = IERC20(token).balanceOf(address(this));
-        IERC20(token).transfer(owner(), balance);
+        require(
+            IERC20(token).transfer(owner(), balance),
+            "Router: token recovery failed"
+        );
     }
     
     // ============ View Functions ============
@@ -598,9 +627,9 @@ contract SmartDeFiRouterAgent is Ownable, ReentrancyGuard, Pausable {
      * @notice Get current APY from active protocol
      * @return apy Current APY in basis points
      */
-    function getCurrentAPY() external view returns (uint256 apy) {
+    function getCurrentApy() external view returns (uint256 apy) {
         if (currentProtocol == address(0)) return 0;
-        return IProtocolAdapter(currentProtocol).getAPY();
+        return IProtocolAdapter(currentProtocol).getApy();
     }
     
     /**

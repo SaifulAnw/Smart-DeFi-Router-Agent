@@ -47,9 +47,9 @@ interface IPoolDataProvider {
 contract AaveAdapter is Ownable {
     
     IERC20 public immutable USDC;
-    IPool public immutable aavePool;
-    IPoolDataProvider public immutable dataProvider;
-    address public immutable router;
+    IPool public immutable AAVE_POOL;
+    IPoolDataProvider public immutable DATA_PROVIDER;
+    address public immutable ROUTER;
     
     event AaveDeposit(uint256 amount, uint256 timestamp);
     event AaveWithdraw(uint256 amount, uint256 timestamp);
@@ -58,8 +58,14 @@ contract AaveAdapter is Ownable {
     error DepositFailed();
     error WithdrawFailed();
     
+    // 1. Define an internal function containing the checking logic
+    function _onlyRouter() internal view {
+        if (msg.sender != ROUTER) revert UnauthorizedCaller();
+    }
+
+    // 2. The modifier now only calls the internal function
     modifier onlyRouter() {
-        if (msg.sender != router) revert UnauthorizedCaller();
+        _onlyRouter(); // Call the checking logic
         _;
     }
     
@@ -70,30 +76,56 @@ contract AaveAdapter is Ownable {
         address _router
     ) Ownable(msg.sender) {
         USDC = IERC20(_usdc);
-        aavePool = IPool(_aavePool);
-        dataProvider = IPoolDataProvider(_dataProvider);
-        router = _router;
+        AAVE_POOL = IPool(_aavePool);
+        DATA_PROVIDER = IPoolDataProvider(_dataProvider);
+        ROUTER = _router;
     }
     
     /**
      * @notice Deploy USDC into Aave
      * @param amount Amount to deposit
-     * @param data Additional data (unused for Aave)
      * @return success Whether deposit succeeded
      */
-    function deposit(uint256 amount, bytes calldata data) 
+    function deposit(uint256 amount, bytes calldata) 
         external 
         onlyRouter 
         returns (bool success) 
     {
         // Transfer USDC from router
-        USDC.transferFrom(msg.sender, address(this), amount);
+        // NOTE: In Aave V3, Router should have already APPROVED the Aave Pool beforehand.
+        // If not, must call USDC.transferFrom(router, address(this), amount) 
+        // AND Router should have approved this Adapter.
+        // However, in the Adapter architecture, the Adapter typically requests transfer/approval.
+
+        // In the Adapter architecture, Router will:
+        // 1. APPROVE Adapter
+        // 2. CALL Adapter.deposit(amount, data)
+        // 3. Adapter calls USDC.transferFrom(Router, Adapter, amount)
         
-        // Approve Aave pool
-        USDC.approve(address(aavePool), amount);
+        // Assumption: Router has already approved this Adapter
+        // 1. Check the return value of transferFrom for the security of the old token.
+        require(
+        USDC.transferFrom(msg.sender, address(this), amount),
+            "AaveAdapter: USDC transferFrom failed"
+        );
+
+        // 2. Continue the contract logic
+        // Approve Aave pool (Replace aavePool with AAVE_POOL if have implemented SCREAMING_SNAKE_CASE)
+        USDC.approve(address(AAVE_POOL), amount); // Using the new convention
+
+        // Supply to Aave (Replace aavePool with AAVE_POOL)
+        AAVE_POOL.supply( // Using the new convention
+            address(USDC),
+            amount,
+            address(this),
+            0 // No referral code
+        );
+                
+        // Approve Aave pool (Adapter must approve Aave)
+        USDC.approve(address(AAVE_POOL), amount);
         
         // Supply to Aave
-        aavePool.supply(
+        AAVE_POOL.supply(
             address(USDC),
             amount,
             address(this),
@@ -107,19 +139,18 @@ contract AaveAdapter is Ownable {
     /**
      * @notice Withdraw USDC from Aave
      * @param amount Amount to withdraw
-     * @param data Additional data (unused for Aave)
      * @return success Whether withdrawal succeeded
      */
-    function withdraw(uint256 amount, bytes calldata data) 
+    function withdraw(uint256 amount, bytes calldata) 
         external 
         onlyRouter 
         returns (bool success) 
     {
         // Withdraw from Aave
-        uint256 withdrawn = aavePool.withdraw(
+        uint256 withdrawn = AAVE_POOL.withdraw(
             address(USDC),
             amount,
-            router // Send directly to router
+            ROUTER // Send directly to router
         );
         
         if (withdrawn != amount) revert WithdrawFailed();
@@ -133,7 +164,7 @@ contract AaveAdapter is Ownable {
      * @return balance Current aToken balance
      */
     function getBalance() external view returns (uint256 balance) {
-        (uint256 aTokenBalance,,,,,,,, ) = dataProvider.getUserReserveData(
+        (uint256 aTokenBalance,,,,,,,, ) = DATA_PROVIDER.getUserReserveData(
             address(USDC),
             address(this)
         );
@@ -144,15 +175,15 @@ contract AaveAdapter is Ownable {
      * @notice Get current APY from Aave
      * @return apy Current supply APY in basis points
      */
-    function getAPY() external view returns (uint256 apy) {
-        (,,,,,, uint256 liquidityRate,, ) = dataProvider.getUserReserveData(
+    function getApy() external view returns (uint256 apy) {
+        (,,,,,, uint256 liquidityRate,, ) = DATA_PROVIDER.getUserReserveData(
             address(USDC),
             address(this)
         );
         
-        // Convert liquidityRate to basis points (APY)
-        // Aave returns rate in ray (27 decimals)
-        return (liquidityRate / 1e23); // Convert to basis points
+        // Convert liquidityRate from Ray (27 decimals) to basis points (4 decimals)
+        // Ray (1e27) / 1e23 = 1e4 (Basis Points)
+        // e.g., 0.037 * 1e27 (Ray) / 1e23 = 370 (bps)
+        return (liquidityRate / 1e23); 
     }
 }
-

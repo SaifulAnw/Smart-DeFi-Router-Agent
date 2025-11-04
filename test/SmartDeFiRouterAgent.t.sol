@@ -57,14 +57,27 @@ contract MockProtocolAdapter {
     }
     
     function deposit(uint256 amount, bytes calldata) external returns (bool) {
-        USDC.transferFrom(msg.sender, address(this), amount);
+        // Check the return value of transferFrom to prevent an unchecked return value
+        require(
+            USDC.transferFrom(msg.sender, address(this), amount),
+            "TransferFrom failed" // Error message if transfer fails returns false
+        );
+
+        // If require() passes, we can safely update the internal balance
         balance += amount;
         return true;
     }
     
     function withdraw(uint256 amount, bytes calldata) external returns (bool) {
+        // Reduce the internal balance FIRST (Best Practice: State changes before external calls)
         balance -= amount;
-        USDC.transfer(msg.sender, amount);
+
+        // Check the return value of the transfer to prevent an unchecked return value
+        require(
+            USDC.transfer(msg.sender, amount),
+            "Transfer failed" // Error message if the transfer fails, return false
+        );
+
         return true;
     }
     
@@ -72,7 +85,7 @@ contract MockProtocolAdapter {
         return balance;
     }
     
-    function getAPY() external pure returns (uint256) {
+    function getApy() external pure returns (uint256) {
         return 500; // 5% APY
     }
 }
@@ -124,7 +137,7 @@ contract SmartDeFiRouterAgentTest is Test {
         
         vm.startPrank(user1);
         usdc.approve(address(router), depositAmount);
-        router.depositUSDC(depositAmount);
+        router.depositUsdc(depositAmount);
         vm.stopPrank();
         
         assertEq(router.getUserBalance(user1), depositAmount);
@@ -137,12 +150,12 @@ contract SmartDeFiRouterAgentTest is Test {
         
         vm.startPrank(user1);
         usdc.approve(address(router), amount1);
-        router.depositUSDC(amount1);
+        router.depositUsdc(amount1);
         vm.stopPrank();
         
         vm.startPrank(user2);
         usdc.approve(address(router), amount2);
-        router.depositUSDC(amount2);
+        router.depositUsdc(amount2);
         vm.stopPrank();
         
         assertEq(router.getUserBalance(user1), amount1);
@@ -153,7 +166,7 @@ contract SmartDeFiRouterAgentTest is Test {
     function testDepositZeroAmount() public {
         vm.startPrank(user1);
         vm.expectRevert(SmartDeFiRouterAgent.InvalidAmount.selector);
-        router.depositUSDC(0);
+        router.depositUsdc(0);
         vm.stopPrank();
     }
     
@@ -166,12 +179,12 @@ contract SmartDeFiRouterAgentTest is Test {
         // Deposit first
         vm.startPrank(user1);
         usdc.approve(address(router), depositAmount);
-        router.depositUSDC(depositAmount);
+        router.depositUsdc(depositAmount);
         
         uint256 balanceBefore = usdc.balanceOf(user1);
         
         // Withdraw
-        router.withdrawUSDC(withdrawAmount);
+        router.withdrawUsdc(withdrawAmount);
         vm.stopPrank();
         
         uint256 balanceAfter = usdc.balanceOf(user1);
@@ -186,10 +199,10 @@ contract SmartDeFiRouterAgentTest is Test {
         
         vm.startPrank(user1);
         usdc.approve(address(router), depositAmount);
-        router.depositUSDC(depositAmount);
+        router.depositUsdc(depositAmount);
         
         vm.expectRevert(SmartDeFiRouterAgent.InsufficientBalance.selector);
-        router.withdrawUSDC(withdrawAmount);
+        router.withdrawUsdc(withdrawAmount);
         vm.stopPrank();
     }
     
@@ -201,7 +214,7 @@ contract SmartDeFiRouterAgentTest is Test {
         // User deposits
         vm.startPrank(user1);
         usdc.approve(address(router), depositAmount);
-        router.depositUSDC(depositAmount);
+        router.depositUsdc(depositAmount);
         vm.stopPrank();
         
         // Keeper rebalances to Protocol B
@@ -274,13 +287,13 @@ contract SmartDeFiRouterAgentTest is Test {
         vm.startPrank(user1);
         usdc.approve(address(router), 100_000e6);
         vm.expectRevert();
-        router.depositUSDC(100_000e6);
+        router.depositUsdc(100_000e6);
         vm.stopPrank();
         
         router.unpause();
         
         vm.startPrank(user1);
-        router.depositUSDC(100_000e6);
+        router.depositUsdc(100_000e6);
         vm.stopPrank();
         
         assertEq(router.getUserBalance(user1), 100_000e6);
@@ -294,14 +307,14 @@ contract SmartDeFiRouterAgentTest is Test {
         
         vm.startPrank(user1);
         usdc.approve(address(router), depositAmount);
-        router.depositUSDC(depositAmount);
+        router.depositUsdc(depositAmount);
         vm.stopPrank();
         
         // Now rebalance to set current protocol
         vm.prank(keeper);
         router.executeRebalance(address(protocolA), depositAmount, "");
         
-        uint256 apy = router.getCurrentAPY();
+        uint256 apy = router.getCurrentApy();
         assertEq(apy, 500); // Mock protocol returns 5%
     }
     

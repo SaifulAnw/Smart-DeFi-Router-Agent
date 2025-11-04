@@ -86,7 +86,7 @@ contract DeploySmartDeFiRouter is Script {
         }
         
         // Configure CCTP
-        router.configureCCTP(
+        router.configureCctp(
             cctpTokenMessenger,
             cctpMessageTransmitter
         );
