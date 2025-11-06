@@ -2,9 +2,12 @@
 pragma solidity ^0.8.30;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+
+using SafeERC20 for IERC20;
 
 /**
  * @title IProtocolAdapter
@@ -259,26 +262,28 @@ contract SmartDeFiRouterAgent is Ownable, ReentrancyGuard, Pausable {
         nonReentrant 
         whenNotPaused 
     {
-        if (amount == 0) revert InvalidAmount();
-        
-        // Transfer USDC from user to contract
+        if (amount == 0) revert InvalidAmount(); 
+
+        // 1. Transfer USDC from user to Router (Router receives funds) [cite: 40, 41]
         require(
             USDC.transferFrom(msg.sender, address(this), amount),
             "Router: deposit transferFrom failed"
-        );
-                
-        // Update user balance
+        ); 
+
+        // 2. Update accounting (State change first) [cite: 42]
         balances[msg.sender] += amount;
-        totalDeposits += amount;
-        
-        // Deploy to current protocol if set
+        totalDeposits += amount; 
+
+        // 3. Deploy to current protocol (Pull/Adapter pattern)
         if (currentProtocol != address(0)) {
+            require(currentProtocol.code.length > 0, "CURRENT_NOT_CONTRACT");
+            USDC.approve(currentProtocol, 0);
             USDC.approve(currentProtocol, amount);
             IProtocolAdapter(currentProtocol).deposit(amount, "");
             protocols[currentProtocol].totalAllocated += amount;
         }
         
-        emit Deposit(msg.sender, amount, balances[msg.sender], block.timestamp);
+        emit Deposit(msg.sender, amount, balances[msg.sender], block.timestamp); // [cite: 44]
     }
     
     /**
@@ -537,6 +542,13 @@ contract SmartDeFiRouterAgent is Ownable, ReentrancyGuard, Pausable {
         protocols[protocol].active = false;
     }
     
+
+    function setCurrentProtocol(address adapter) external onlyOwner {
+        if (!registeredProtocols[adapter]) revert("NOT_REGISTERED");
+        if (adapter.code.length == 0) revert("NOT_CONTRACT");
+        currentProtocol = adapter;
+    }
+
     // ============ Admin Functions ============
     
     /**
