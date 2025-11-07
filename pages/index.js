@@ -64,10 +64,15 @@ const index = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const items = await TOKEN_ICO();
-        console.log("Items:", items);
-        if (items) {
-          setDetail(items);
+        // Only fetch if we have access to window and ethereum
+        if (typeof window !== 'undefined' && window.ethereum) {
+          const items = await TOKEN_ICO();
+          console.log("Items:", items);
+          if (items) {
+            setDetail(items);
+          }
+        } else {
+          console.log("Waiting for wallet connection...");
         }
       } catch (error) {
         console.log("Error fetching data:", error);

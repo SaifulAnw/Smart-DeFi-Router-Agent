@@ -8,7 +8,7 @@ import erc20 from "./ERC20.json";
 export const TOKEN_ADDRESS = "0x033043c2DA7Fa1f4227e3BA4835A58092A95A5F2";
 export const ERC20_ABI = erc20.abi;
 export const OWNER_ADDRESS = "0xfec13f54150e2edf64a07a8bbe8672e10a35e9cd";
-export const CONTRACT_ADDRESS = "0x8Ba3dC1769b1b5df651500A66ff56ac350F1F85a";
+export const CONTRACT_ADDRESS = "0x0788A9c94094D6e5549D2C16EE24e14CcB0a28aC";
 export const CONTRACT_ABI = tokenICO.abi;
 
 // networks object to store network configurations
@@ -91,15 +91,15 @@ const networks = {
     blockExplorerUrls: ["https://sepolia.basescan.org"],
   },
   arc_testnet: {
-    chainId: `0x${Number(1244).toString(16)}`,
+    chainId: `0x${Number(5042002).toString(16)}`,
     chainName: "Arc Testnet",
     nativeCurrency: {
       name: "ETH",
       symbol: "ETH",
       decimals: 18,
     },
-    rpcUrls: ["https://rpc.arc.gmi.sh"],
-    blockExplorerUrls: ["https://testnet.arcscan.net"],
+    rpcUrls: ["https://arc-testnet.drpc.org"],
+    blockExplorerUrls: ["https://testnet.arcscan.app"],
   },
   localhost: {
     chainId: `0x${Number(31337).toString(16)}`,
@@ -135,9 +135,25 @@ export const handleNetworkSwitch = async (networkName = "holesky") => {
   await changeNetwork({ networkName });
 };
 
+// Helper function to get current network
+export const getCurrentNetwork = async () => {
+  try {
+    if (!window.ethereum) return null;
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const network = await provider.getNetwork();
+    return {
+      chainId: Number(network.chainId),
+      name: network.name,
+    };
+  } catch (error) {
+    console.log("Error getting network:", error);
+    return null;
+  }
+};
+
 export const CHECK_WALLET_CONNECTED = async () => {
   if (!window.ethereum) return console.log("Install Metamask");
-  await handleNetworkSwitch();
+  await handleNetworkSwitch("sepolia");
 
   const account = await window.ethereum.request({ method: "eth_accounts" });
 
@@ -151,7 +167,7 @@ export const CHECK_WALLET_CONNECTED = async () => {
 export const CONNECT_WALLET = async () => {
   try {
     if (!window.ethereum) return console.log("Install Metamask");
-    await handleNetworkSwitch();
+    await handleNetworkSwitch("sepolia");
     const accounts = await window.ethereum.request({
       method: "eth_requestAccounts",
     });
@@ -167,46 +183,56 @@ const fetchContract = (address, abi, signerOrProvider) =>
 
 export const TOKEN_ICO_CONTRACT = async () => {
   try {
+    // Check if window and ethereum are available
+    if (typeof window === "undefined") {
+      console.log("Window is not defined");
+      return null;
+    }
+
     if (!window.ethereum) {
       console.log("Please install MetaMask");
       return null;
     }
-    
-    const web3Modal = new Web3Modal();
-    const connection = await web3Modal.connect();
-    
-    if (!connection) {
-      console.log("Failed to connect to wallet");
+
+    // Check if ethers is properly loaded
+    if (!ethers || !ethers.BrowserProvider) {
+      console.log("Ethers library not properly loaded");
       return null;
     }
-    
-    const provider = new ethers.providers.Web3Provider(connection);
-    const signer = provider.getSigner();
+
+    // Use ethers v6 syntax - BrowserProvider instead of Web3Provider
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
     const contract = fetchContract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
     return contract;
   } catch (error) {
-    console.log("TOKEN_ICO_CONTRACT Error:", error.message);
+    console.log("TOKEN_ICO_CONTRACT Error:", error.message || error);
     return null;
   }
 };
 
 export const ERC20_CONTRACT = async (address) => {
   try {
+    // Check if window and ethereum are available
+    if (typeof window === "undefined") {
+      console.log("Window is not defined");
+      return null;
+    }
+
     if (!window.ethereum) {
       console.log("Please install MetaMask");
       return null;
     }
-    
-    const web3Modal = new Web3Modal();
-    const connection = await web3Modal.connect();
-    
-    if (!connection) {
-      console.log("Failed to connect to wallet");
+
+    // Check if ethers is properly loaded
+    if (!ethers || !ethers.BrowserProvider) {
+      console.log("Ethers library not properly loaded");
       return null;
     }
-    
-    const provider = new ethers.providers.Web3Provider(connection);
-    const signer = provider.getSigner();
+
+    // Use ethers v6 syntax - BrowserProvider instead of Web3Provider
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
     const tokenAddress = address || TOKEN_ADDRESS;
     const contract = fetchContract(tokenAddress, ERC20_ABI, signer);
     return contract;
@@ -218,21 +244,26 @@ export const ERC20_CONTRACT = async (address) => {
 
 export const ERC20 = async () => {
   try {
+    // Check if window and ethereum are available
+    if (typeof window === "undefined") {
+      console.log("Window is not defined");
+      return null;
+    }
+
     if (!window.ethereum) {
       console.log("Please install MetaMask");
       return null;
     }
-    
-    const web3Modal = new Web3Modal();
-    const connection = await web3Modal.connect();
-    
-    if (!connection) {
-      console.log("Failed to connect to wallet");
+
+    // Check if ethers is properly loaded
+    if (!ethers || !ethers.BrowserProvider) {
+      console.log("Ethers library not properly loaded");
       return null;
     }
-    
-    const provider = new ethers.providers.Web3Provider(connection);
-    const signer = provider.getSigner();
+
+    // Use ethers v6 syntax - BrowserProvider instead of Web3Provider
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
     const contract = fetchContract(TOKEN_ADDRESS, ERC20_ABI, signer);
     const network = await provider.getNetwork();
     const userAddress = await signer.getAddress();
@@ -241,15 +272,15 @@ export const ERC20 = async () => {
     const symbol = await contract.symbol();
     const totalSupply = await contract.totalSupply();
     const decimals = await contract.decimals();
-    const address = contract.address;
+    const address = await contract.getAddress();
 
     const token = {
       address: address,
       name: name,
       symbol: symbol,
       decimals: decimals,
-      supply: ethers.utils.formatEther(totalSupply.toString()),
-      balance: ethers.utils.formatEther(balance.toString()),
+      supply: ethers.formatEther(totalSupply.toString()),
+      balance: ethers.formatEther(balance.toString()),
       chainId: network.chainId,
     };
 
@@ -263,23 +294,28 @@ export const ERC20 = async () => {
 
 export const GET_BALANCE = async () => {
   try {
+    // Check if window and ethereum are available
+    if (typeof window === "undefined") {
+      console.log("Window is not defined");
+      return "0";
+    }
+
     if (!window.ethereum) {
       console.log("Please install MetaMask");
       return "0";
     }
-    
-    const web3Modal = new Web3Modal();
-    const connection = await web3Modal.connect();
-    
-    if (!connection) {
-      console.log("Failed to connect to wallet");
+
+    // Check if ethers is properly loaded
+    if (!ethers || !ethers.BrowserProvider) {
+      console.log("Ethers library not properly loaded");
       return "0";
     }
-    
-    const provider = new ethers.providers.Web3Provider(connection);
-    const signer = provider.getSigner();
-    const nativeBalance = await signer.getBalance();
-    return ethers.utils.formatEther(nativeBalance.toString());
+
+    // Use ethers v6 syntax - BrowserProvider instead of Web3Provider
+    const provider = new ethers.BrowserProvider(window.ethereum);
+    const signer = await provider.getSigner();
+    const nativeBalance = await provider.getBalance(signer.address);
+    return ethers.formatEther(nativeBalance.toString());
   } catch (error) {
     console.log("GET_BALANCE Error:", error.message);
     return "0";
@@ -288,24 +324,28 @@ export const GET_BALANCE = async () => {
 
 export const CHECK_ACCOUNT_BALANCE = async (ADDRESS) => {
   try {
+    // Check if window and ethereum are available
+    if (typeof window === "undefined") {
+      console.log("Window is not defined");
+      return "0";
+    }
+
     if (!window.ethereum) {
       console.log("Please install MetaMask");
       return "0";
     }
-    
-    const web3Modal = new Web3Modal();
-    const connection = await web3Modal.connect();
-    
-    if (!connection) {
-      console.log("Failed to connect to wallet");
+
+    // Check if ethers is properly loaded
+    if (!ethers || !ethers.BrowserProvider) {
+      console.log("Ethers library not properly loaded");
       return "0";
     }
-    
-    const provider = new ethers.providers.Web3Provider(connection);
 
+    // Use ethers v6 syntax - BrowserProvider instead of Web3Provider
+    const provider = new ethers.BrowserProvider(window.ethereum);
     const maticBal = await provider.getBalance(ADDRESS);
 
-    return ethers.utils.formatEther(maticBal.toString());
+    return ethers.formatEther(maticBal.toString());
   } catch (error) {
     console.log("CHECK_ACCOUNT_BALANCE Error:", error.message);
     return "0";

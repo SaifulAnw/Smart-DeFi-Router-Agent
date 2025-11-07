@@ -10,6 +10,8 @@ import {
   GET_BALANCE,
   CHECK_ACCOUNT_BALANCE,
   addTokenToMetamask,
+  CONTRACT_ADDRESS,
+  getCurrentNetwork,
 } from "../context/constants";
 
 export const TOKEN_ICO_Context = createContext();
@@ -17,7 +19,7 @@ export const TOKEN_ICO_Context = createContext();
 export const TokenICOProvider = ({ children }) => {
   const DAPP_NAME = "TOKEN ICO DAPP";
   const currency = "ETH";
-  const network = "sepolia";
+  const network = "arc_testnet";
 
   const [loader, setLoader] = useState(false);
   const [account, setAccount] = useState("");
@@ -35,42 +37,105 @@ export const TokenICOProvider = ({ children }) => {
   const TOKEN_ICO = async () => {
     try {
       const address = await CHECK_WALLET_CONNECTED();
-      if (address) {
-        setLoader(true);
-        const contract = await TOKEN_ICO_CONTRACT();
-        
-        if (!contract) {
-          setLoader(false);
-          notifyError("Failed to connect to contract");
-          return null;
-        }
-        
-        const tokenDetails = await contract.getTokenDetails();
-        const contractOwner = await contract.owner();
-        const soldTokens = await contract.soldTokens();
-
-        const ethBal = await GET_BALANCE();
-        const token = {
-          tokenBal: ethers.utils.formatEther(tokenDetails.balance.toString()),
-          name: tokenDetails.name,
-          symbol: tokenDetails.symbol,
-          supply: ethers.utils.formatEther(tokenDetails.supply.toString()),
-          tokenPrice: ethers.utils.formatEther(
-            tokenDetails.tokenPrice.toString()
-          ),
-          tokenAddr: tokenDetails.tokenAddr,
-          matic: ethBal,
-          address: address.toLowerCase(),
-          owner: contractOwner.toLowerCase(),
-          soldTokens: ethers.utils.formatEther(soldTokens.toString()),
-        };
-        setLoader(false);
-        return token;
+      if (!address) {
+        console.log("No wallet connected");
+        return null;
       }
-    } catch (err) {
-      console.log(err);
+
+      setLoader(true);
+
+      // Get current network info
+      const currentNetwork = await getCurrentNetwork();
+      if (currentNetwork) {
+        console.log(
+          `Connected to network: ${currentNetwork.name} (Chain ID: ${currentNetwork.chainId})`
+        );
+      }
+
+      const contract = await TOKEN_ICO_CONTRACT();
+
+      if (!contract) {
+        setLoader(false);
+        console.log("Failed to connect to contract");
+        return null;
+      }
+
+      // Verify contract exists by checking if code exists at the address
+      let contractExists = true;
+      if (typeof window !== "undefined" && window.ethereum) {
+        try {
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          const code = await provider.getCode(CONTRACT_ADDRESS);
+
+          if (code === "0x" || code === "0x0") {
+            contractExists = false;
+            setLoader(false);
+            const networkInfo = currentNetwork
+              ? `${currentNetwork.name} (Chain ID: ${currentNetwork.chainId})`
+              : "current network";
+            console.log(
+              `⚠️ Contract not deployed at ${CONTRACT_ADDRESS} on ${networkInfo}`
+            );
+            console.log(`💡 Expected network: ${network}`);
+            console.log(
+              `💡 Please deploy your contract to ${network} or update the CONTRACT_ADDRESS in context/constants.js`
+            );
+            notifyError(
+              `Contract not found on ${networkInfo}. Please deploy the contract first.`
+            );
+            return null;
+          }
+        } catch (codeCheckError) {
+          console.log(
+            "⚠️ Could not verify contract existence (RPC issue), continuing anyway..."
+          );
+          // Continue anyway - the actual contract call will fail if it doesn't exist
+        }
+      }
+
+      const tokenDetails = await contract.getTokenDetails();
+      const contractOwner = await contract.owner();
+      const soldTokens = await contract.soldTokens();
+
+      const ethBal = await GET_BALANCE();
+      const token = {
+        tokenBal: ethers.formatEther(tokenDetails.balance.toString()),
+        name: tokenDetails.name,
+        symbol: tokenDetails.symbol,
+        supply: ethers.formatEther(tokenDetails.supply.toString()),
+        tokenPrice: ethers.formatEther(tokenDetails.tokenPrice.toString()),
+        tokenAddr: tokenDetails.tokenAddr,
+        matic: ethBal,
+        address: address.toLowerCase(),
+        owner: contractOwner.toLowerCase(),
+        soldTokens: ethers.formatEther(soldTokens.toString()),
+      };
       setLoader(false);
-      notifyError("Failed to fetch token details");
+      return token;
+    } catch (err) {
+      console.log("TOKEN_ICO Error:", err);
+      setLoader(false);
+
+      if (err.code === "CALL_EXCEPTION") {
+        console.log(`❌ Contract call failed at address: ${CONTRACT_ADDRESS}`);
+        console.log(`📍 Current network: ${network}`);
+        console.log(`💡 Solution: Deploy your contracts to ${network} network`);
+        console.log(
+          `💡 Or update CONTRACT_ADDRESS in context/constants.js with the correct deployed address`
+        );
+        notifyError(
+          `Contract not deployed. Please deploy to ${network} network first.`
+        );
+      } else if (err.code === "UNKNOWN_ERROR") {
+        console.log(`⚠️ RPC Error - possibly network connectivity issue`);
+        notifyError(
+          "Network error. Please check MetaMask connection and try again."
+        );
+      } else {
+        notifyError(
+          "Failed to fetch token details. Please ensure contract is deployed."
+        );
+      }
       return null;
     }
   };
@@ -83,23 +148,20 @@ export const TokenICOProvider = ({ children }) => {
         const contract = await TOKEN_ICO_CONTRACT();
         const tokenDetails = await contract.getTokenDetails();
 
-        const availableTokens = ethers.utils.formatEther(
+        const availableTokens = ethers.formatEther(
           tokenDetails.balance.toString()
         );
 
         if (availableTokens >= amount) {
-          const price = ethers.utils.formatEther(
-            tokenDetails.tokenPrice.toString()
-          );
+          const price = ethers.formatEther(tokenDetails.tokenPrice.toString());
 
-          const payAmount = ethers.utils.parseUnits(
+          const payAmount = ethers.parseUnits(
             (Number(price) * Number(amount)).toString(),
             "ether"
           );
 
           const transaction = await contract.buyToken(Number(amount), {
             value: payAmount.toString(),
-            gasLimit: ethers.utils.hexlify(8000000),
           });
 
           await transaction.wait();
@@ -125,7 +187,7 @@ export const TokenICOProvider = ({ children }) => {
       if (address) {
         const contract = await TOKEN_ICO_CONTRACT();
         const tokenDetails = await contract.getTokenDetails();
-        const availableToken = ethers.utils.formatEther(
+        const availableToken = ethers.formatEther(
           tokenDetails.balance.toString()
         );
 
@@ -172,7 +234,7 @@ export const TokenICOProvider = ({ children }) => {
       const address = await CHECK_WALLET_CONNECTED();
       if (address) {
         const contract = await TOKEN_ICO_CONTRACT();
-        const payAmount = ethers.utils.parseUnits(price.toString(), "ether");
+        const payAmount = ethers.parseUnits(price.toString(), "ether");
 
         const transaction = await contract.updateTokenSalePrice(payAmount);
         await transaction.wait();
@@ -193,11 +255,10 @@ export const TokenICOProvider = ({ children }) => {
       const address = await CHECK_WALLET_CONNECTED();
       if (address) {
         const contract = await TOKEN_ICO_CONTRACT();
-        const payAmount = ethers.utils.parseUnits(amount.toString(), "ether");
+        const payAmount = ethers.parseUnits(amount.toString(), "ether");
 
         const transaction = await contract.transferToOwner(payAmount, {
           value: payAmount.toString(),
-          gasLimit: ethers.utils.hexlify(8000000),
         });
         await transaction.wait();
         setLoader(false);
@@ -218,14 +279,10 @@ export const TokenICOProvider = ({ children }) => {
       const address_from = await CHECK_WALLET_CONNECTED();
       if (address_from) {
         const contract = await TOKEN_ICO_CONTRACT();
-        const payAmount = ethers.utils.parseUnits(
-          _receiver.toString(),
-          "ether"
-        );
+        const payAmount = ethers.parseUnits(_receiver.toString(), "ether");
 
         const transaction = await contract.transferEther(_address, payAmount, {
           value: payAmount.toString(),
-          gasLimit: ethers.utils.hexlify(8000000),
         });
         await transaction.wait();
         setLoader(false);
@@ -246,11 +303,9 @@ export const TokenICOProvider = ({ children }) => {
       const address_from = await CHECK_WALLET_CONNECTED();
       if (address_from) {
         const contract = await ERC20_CONTRACT(_tokenAddress);
-        const payAmount = ethers.utils.parseUnits(_amount.toString(), "ether");
+        const payAmount = ethers.parseUnits(_amount.toString(), "ether");
 
-        const transaction = await contract.transfer(_sendTo, payAmount, {
-          gasLimit: ethers.utils.hexlify(8000000),
-        });
+        const transaction = await contract.transfer(_sendTo, payAmount);
         await transaction.wait();
         setLoader(false);
         notifySuccess("Token transfer successful!");
