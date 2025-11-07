@@ -5,4 +5,4 @@ export const convertTime = () => {
 };
 
 export const shortenAddress = (address) =>
-  `${address.slice(0, 6)}...${address ? address.slice(-4) : ''}`;
+  address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "";

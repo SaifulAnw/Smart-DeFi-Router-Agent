@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import {
   About,
   Footer,
@@ -27,7 +27,6 @@ import {
 import { convertTime, shortenAddress } from "../Utils/index";
 import { TOKEN_ICO_Context } from "../context/index";
 
-import { fromTwos } from "ethers";
 import { TOKEN_ADDRESS } from "../context/constants";
 
 const index = () => {
@@ -64,15 +63,20 @@ const index = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const items = await TOKEN_ICO();
-      console.log("Items:", items);
-      setDetail(items);
+      try {
+        const items = await TOKEN_ICO();
+        console.log("Items:", items);
+        if (items) {
+          setDetail(items);
+        }
+      } catch (error) {
+        console.log("Error fetching data:", error);
+      }
     };
     fetchData();
   }, [account]);
   return (
     <>
-      <div>The AI Agents</div>;
       <div className="body_wrap">
         {ownerModel && (
           <Owner

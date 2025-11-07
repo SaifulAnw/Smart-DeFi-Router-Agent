@@ -37,8 +37,14 @@ export const TokenICOProvider = ({ children }) => {
       const address = await CHECK_WALLET_CONNECTED();
       if (address) {
         setLoader(true);
-        setAccount(address);
         const contract = await TOKEN_ICO_CONTRACT();
+        
+        if (!contract) {
+          setLoader(false);
+          notifyError("Failed to connect to contract");
+          return null;
+        }
+        
         const tokenDetails = await contract.getTokenDetails();
         const contractOwner = await contract.owner();
         const soldTokens = await contract.soldTokens();
@@ -65,6 +71,7 @@ export const TokenICOProvider = ({ children }) => {
       console.log(err);
       setLoader(false);
       notifyError("Failed to fetch token details");
+      return null;
     }
   };
 
