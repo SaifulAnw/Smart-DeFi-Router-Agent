@@ -157,8 +157,8 @@ export const CONNECT_WALLET = async () => {
     });
 
     return accounts[0];
-  } catch (err) {
-    console.log(err.message);
+  } catch (error) {
+    console.log(error.message);
   }
 };
 
@@ -173,8 +173,8 @@ export const TOKEN_ICO_CONTRACT = async () => {
     const signer = provider.getSigner();
     const contract = fetchContract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
     return contract;
-  } catch (err) {
-    console.log(err.message);
+  } catch (error) {
+    console.log(error.message);
   }
 };
 
@@ -187,8 +187,8 @@ export const ERC20_CONTRACT = async (address) => {
     const tokenAddress = address || TOKEN_ADDRESS;
     const contract = fetchContract(tokenAddress, ERC20_ABI, signer);
     return contract;
-  } catch (err) {
-    console.log(err.message);
+  } catch (error) {
+    console.log(error.message);
   }
 };
 
@@ -220,8 +220,8 @@ export const ERC20 = async () => {
 
     console.log(token);
     return token;
-  } catch (err) {
-    console.log(err.message);
+  } catch (error) {
+    console.log(error.message);
   }
 };
 
@@ -233,8 +233,8 @@ export const GET_BALANCE = async () => {
     const signer = provider.getSigner();
     const nativeBalance = await signer.getBalance();
     return ethers.utils.formatEther(nativeBalance.toString());
-  } catch (err) {
-    console.log(err.message);
+  } catch (error) {
+    console.log(error.message);
   }
 };
 
@@ -247,8 +247,8 @@ export const CHECK_ACCOUNT_BALANCE = async (ADDRESS) => {
     const maticBal = await provider.getBalance(ADDRESS);
 
     return ethers.utils.formatEther(maticBal.toString());
-  } catch (err) {
-    console.log(err.message);
+  } catch (error) {
+    console.log(error.message);
   }
 };
 
