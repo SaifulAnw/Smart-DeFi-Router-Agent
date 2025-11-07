@@ -5,14 +5,11 @@ import Web3Modal from "web3modal";
 import tokenICO from "./TokenICO.json";
 import erc20 from "./ERC20.json";
 
-export const TOKEN_ADDRESS = "";
+export const TOKEN_ADDRESS = "0x033043c2DA7Fa1f4227e3BA4835A58092A95A5F2";
 export const ERC20_ABI = erc20.abi;
-export const OWNER_ADDRESS = "";
-export const CONTRACT_ADDRESS = "";
+export const OWNER_ADDRESS = "0xfec13f54150e2edf64a07a8bbe8672e10a35e9cd";
+export const CONTRACT_ADDRESS = "0x8Ba3dC1769b1b5df651500A66ff56ac350F1F85a";
 export const CONTRACT_ABI = tokenICO.abi;
-
-const tokenImage =
-  "https://www.daulathussain.com/wp-content/uploads/2024/05/theblockchaincoders.jpg";
 
 // networks object to store network configurations
 const networks = {
@@ -165,7 +162,6 @@ export const CONNECT_WALLET = async () => {
   }
 };
 
-// Helper function to fetch contract instance
 const fetchContract = (address, abi, signerOrProvider) =>
   new ethers.Contract(address, abi, signerOrProvider);
 
@@ -248,13 +244,16 @@ export const CHECK_ACCOUNT_BALANCE = async (ADDRESS) => {
     const connection = await web3Modal.connect();
     const provider = new ethers.providers.Web3Provider(connection);
 
-    const balance = await provider.getBalance(ADDRESS);
+    const maticBal = await provider.getBalance(ADDRESS);
 
-    return ethers.utils.formatEther(balance.toString());
+    return ethers.utils.formatEther(maticBal.toString());
   } catch (err) {
     console.log(err.message);
   }
 };
+
+const tokenImage =
+  "https://www.daulathussain.com/wp-content/uploads/2024/05/theblockchaincoders.jpg";
 
 export const addTokenToMetamask = async () => {
   if (window.ethereum) {
