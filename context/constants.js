@@ -102,11 +102,16 @@ const networks = {
     chainId: `0x${Number(5042002).toString(16)}`,
     chainName: "Arc Testnet",
     nativeCurrency: {
-      name: "ETH",
-      symbol: "ETH",
-      decimals: 18,
+      name: "USDC",
+      symbol: "USDC",
+      decimals: 6,
     },
-    rpcUrls: ["https://arc-testnet.drpc.org"],
+    rpcUrls: [
+      "https://rpc.testnet.arc.network",
+      "https://rpc.blockdaemon.testnet.arc.network",
+      "https://rpc.drpc.testnet.arc.network",
+      "https://rpc.quicknode.testnet.arc.network",
+    ],
     blockExplorerUrls: ["https://testnet.arcscan.app"],
   },
   localhost: {

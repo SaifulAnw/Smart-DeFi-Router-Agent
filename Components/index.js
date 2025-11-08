@@ -16,6 +16,7 @@ import Features from "./Features";
 import TokenInfo from "./TokenInfo";
 import AgentDashboard from "./AgentDashboard";
 import RouteOptimizer from "./RouteOptimizer";
+import VoiceCommands from "./VoiceCommands";
 
 // Model
 import Popup from "./Popup";
@@ -44,6 +45,7 @@ export {
   TokenInfo,
   AgentDashboard,
   RouteOptimizer,
+  VoiceCommands,
   // Model
   Popup,
   TransferCurrency,

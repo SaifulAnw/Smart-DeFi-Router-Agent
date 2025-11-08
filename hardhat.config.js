@@ -1,8 +1,10 @@
-require("@nomicfoundation/hardhat-toolbox");
-require("dotenv").config();
+import "@nomicfoundation/hardhat-toolbox";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 /** @type import('hardhat/config').HardhatUserConfig */
-module.exports = {
+export default {
   solidity: {
     version: "0.8.20",
     settings: {
@@ -27,9 +29,10 @@ module.exports = {
     },
     // Arc Testnet
     arc_testnet: {
-      url: process.env.ARC_TESTNET_RPC_URL || "https://arc-testnet.drpc.org",
+      url: process.env.ARC_TESTNET_RPC_URL || "https://rpc.testnet.arc.network",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 5042002,
+      gasPrice: "auto",
     },
     // Localhost
     localhost: {

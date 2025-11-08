@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaRobot, FaCalculator, FaChartLine } from "react-icons/fa";
 import { IoMdCheckmarkCircle } from "react-icons/io";
 
-const RouteOptimizer = ({ calculateRoute, executeRoute, setLoader }) => {
+const RouteOptimizer = ({ calculateRoute, executeRoute, setLoader, voiceCommand }) => {
   const [amount, setAmount] = useState("");
   const [targetYield, setTargetYield] = useState(5);
   const [maxRisk, setMaxRisk] = useState(50);
@@ -11,6 +11,40 @@ const RouteOptimizer = ({ calculateRoute, executeRoute, setLoader }) => {
   const [rebalanceThreshold, setRebalanceThreshold] = useState(5);
   const [calculatedRoute, setCalculatedRoute] = useState(null);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [showVoiceNotification, setShowVoiceNotification] = useState(false);
+
+  // Listen for voice commands and auto-fill form
+  useEffect(() => {
+    if (voiceCommand && voiceCommand.action === 'invest') {
+      console.log('Voice command received in RouteOptimizer:', voiceCommand);
+      
+      // Auto-fill form with voice command data - only update if value is provided
+      if (voiceCommand.amount !== null && voiceCommand.amount !== undefined) {
+        setAmount(voiceCommand.amount.toString());
+      }
+      if (voiceCommand.targetYield !== null && voiceCommand.targetYield !== undefined) {
+        setTargetYield(voiceCommand.targetYield);
+      }
+      if (voiceCommand.riskTolerance !== null && voiceCommand.riskTolerance !== undefined) {
+        setMaxRisk(voiceCommand.riskTolerance);
+      }
+      if (voiceCommand.duration !== null && voiceCommand.duration !== undefined) {
+        setDuration(voiceCommand.duration);
+      }
+      if (voiceCommand.autoRebalance !== undefined) {
+        setAutoRebalance(voiceCommand.autoRebalance);
+      }
+      
+      // Show notification
+      setShowVoiceNotification(true);
+      setTimeout(() => setShowVoiceNotification(false), 5000);
+      
+      // Auto-calculate the route
+      setTimeout(() => {
+        handleCalculate();
+      }, 500);
+    }
+  }, [voiceCommand]);
 
   const handleCalculate = async () => {
     if (!amount || amount <= 0) {
@@ -78,6 +112,17 @@ const RouteOptimizer = ({ calculateRoute, executeRoute, setLoader }) => {
         </div>
 
         <div className="optimizer-container">
+          {/* Voice Command Notification */}
+          {showVoiceNotification && (
+            <div className="voice-notification">
+              <FaRobot className="voice-icon-pulse" />
+              <div className="voice-notification-content">
+                <h4>🎤 Voice Command Detected!</h4>
+                <p>Form has been auto-filled with your voice input. Review and click "Calculate Route" to proceed.</p>
+              </div>
+            </div>
+          )}
+
           <div className="row">
             {/* Input Form */}
             <div className="col-lg-6">
@@ -603,6 +648,53 @@ const RouteOptimizer = ({ calculateRoute, executeRoute, setLoader }) => {
           color: #4ade80;
         }
 
+        .voice-notification {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border-radius: 15px;
+          padding: 20px 25px;
+          margin-bottom: 30px;
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          animation: slideInDown 0.5s ease;
+          box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        @keyframes slideInDown {
+          from {
+            transform: translateY(-30px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+
+        .voice-icon-pulse {
+          font-size: 40px;
+          color: #ffd700;
+          animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); }
+        }
+
+        .voice-notification-content h4 {
+          color: #fff;
+          font-size: 18px;
+          margin: 0 0 5px 0;
+          font-weight: 700;
+        }
+
+        .voice-notification-content p {
+          color: #e0e0e0;
+          font-size: 14px;
+          margin: 0;
+        }
+
         @media (max-width: 992px) {
           .optimizer-form,
           .optimizer-results {
@@ -611,6 +703,11 @@ const RouteOptimizer = ({ calculateRoute, executeRoute, setLoader }) => {
 
           .returns-grid {
             grid-template-columns: 1fr;
+          }
+
+          .voice-notification {
+            flex-direction: column;
+            text-align: center;
           }
         }
       `}</style>

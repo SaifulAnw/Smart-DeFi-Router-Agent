@@ -18,6 +18,7 @@ import {
   TokenInfo,
   AgentDashboard,
   RouteOptimizer,
+  VoiceCommands,
   // Model
   Popup,
   TransferCurrency,
@@ -62,6 +63,50 @@ const index = () => {
   const [openUpdateAddress, setOpenUpdateAddress] = useState(false);
   const [openUpdatePrice, setOpenUpdatePrice] = useState(false);
   const [detail, setDetail] = useState(null);
+  const [voiceCommand, setVoiceCommand] = useState(null);
+
+  // Voice command handler
+  const handleVoiceCommand = (command) => {
+    console.log("Voice command received:", command);
+    
+    if (command.action === 'invest') {
+      // Pass command to RouteOptimizer via state
+      setVoiceCommand(command);
+      
+      // Scroll to Route Optimizer
+      setTimeout(() => {
+        const optimizerSection = document.getElementById('optimizer');
+        if (optimizerSection) {
+          optimizerSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 300);
+      
+    } else if (command.action === 'status') {
+      // Navigate to dashboard
+      setVoiceCommand(command);
+      const dashboardSection = document.getElementById('dashboard');
+      if (dashboardSection) {
+        dashboardSection.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else if (command.action === 'withdraw') {
+      // Navigate to dashboard for withdrawal
+      setVoiceCommand(command);
+      const dashboardSection = document.getElementById('dashboard');
+      if (dashboardSection) {
+        dashboardSection.scrollIntoView({ behavior: 'smooth' });
+      }
+      // Show withdrawal UI notification
+      alert(`Withdrawal command detected: ${command.amount ? command.amount + ' USDC' : 'All funds'}`);
+    } else if (command.action === 'rebalance') {
+      // Navigate to dashboard for rebalancing
+      setVoiceCommand(command);
+      const dashboardSection = document.getElementById('dashboard');
+      if (dashboardSection) {
+        dashboardSection.scrollIntoView({ behavior: 'smooth' });
+      }
+      alert('Rebalancing feature will analyze your positions and optimize allocations.');
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -182,7 +227,7 @@ const index = () => {
         />
         <About />
         <Features />
-        <RouteOptimizer setLoader={setLoader} />
+        <RouteOptimizer setLoader={setLoader} voiceCommand={voiceCommand} />
         <AgentDashboard
           routerData={{
             totalValueLocked: detail?.tokenSold || "0",
@@ -222,6 +267,9 @@ const index = () => {
         <Faq />
         <Contact />
         <Footer />
+        
+        {/* Voice Commands - Floating Button */}
+        <VoiceCommands onCommandExecuted={handleVoiceCommand} />
       </div>
     </>
   );
