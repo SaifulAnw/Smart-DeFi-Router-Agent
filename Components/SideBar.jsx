@@ -1,7 +1,61 @@
 import React from "react";
 
 const SideBar = () => {
-  return <div>SideBar</div>;
+  return (
+    <>
+      <div className="body-overlay"></div>
+      <aside className="slide-bar">
+        <div className="close-mobile-menu">
+          <a href="javascript:void(0);" className="tx-close"></a>
+        </div>
+        <nav className="side-mobile-menu">
+          <a href="/" className=" mb-30">
+            YieldFlow
+          </a>
+          <div className="header-mobile-search">
+            <form action="#" role="search">
+              <input type="text" placeholder="Search..." />
+              <button type="submit">
+                <i className="fas fa-search"></i>
+              </button>
+            </form>
+          </div>
+          <ul id="mobile-menu-active">
+            <li>
+              <a className="scrollspy-btn" href="/">
+                Home
+              </a>
+            </li>
+            <li>
+              <a className="scrollspy-btn" href="#about">
+                About
+              </a>
+            </li>
+            <li>
+              <a className="scrollspy-btn" href="#roadmap">
+                Roadmap
+              </a>
+            </li>
+            <li>
+              <a className="scrollspy-btn" href="#team">
+                Team
+              </a>
+            </li>
+            <li>
+              <a className="scrollspy-btn" href="#faq">
+                FAQ
+              </a>
+            </li>
+            <li>
+              <a className="scrollspy-btn" href="#contact">
+                Contact
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </aside>
+    </>
+  );
 };
 
 export default SideBar;

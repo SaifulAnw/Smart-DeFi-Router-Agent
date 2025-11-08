@@ -56,9 +56,7 @@ const Header = ({
           <div className="header__main ul_li_between">
             <div className="header__left ul_li">
               <div className="header__logo">
-                <a href="/">
-                  <img src="assets/img/logo/logo.svg" alt="Logo" srcSet="" />
-                </a>
+                <a href="/">YieldFlow</a>
               </div>
             </div>
 
@@ -98,7 +96,10 @@ const Header = ({
             </div>
             <div className="header__action ul_li">
               <div className="d-xl-none">
-                <a href="" className="header__bar ham hamburger_menu">
+                <a
+                  href="javascript:void(0);"
+                  className="header__bar ham hamburger_menu"
+                >
                   <div className="header__bar-icon">
                     <span />
                     <span />

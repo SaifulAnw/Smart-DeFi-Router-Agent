@@ -19,7 +19,7 @@ export const TOKEN_ICO_Context = createContext();
 export const TokenICOProvider = ({ children }) => {
   const DAPP_NAME = "TOKEN ICO DAPP";
   const currency = "ETH";
-  const network = "arc_testnet";
+  const network = "sepolia";
 
   const [loader, setLoader] = useState(false);
   const [account, setAccount] = useState("");

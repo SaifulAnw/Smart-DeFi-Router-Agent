@@ -15,25 +15,33 @@ export const CONTRACT_ABI = tokenICO.abi;
 const networks = {
   sepolia: {
     chainId: `0x${Number(11155111).toString(16)}`,
-    chainName: "Sepolia",
+    chainName: "Sepolia Testnet",
     nativeCurrency: {
-      name: "SepoliaETH",
-      symbol: "SepoliaETH",
+      name: "Sepolia ETH",
+      symbol: "ETH",
       decimals: 18,
     },
-    rpcUrls: ["https://sepolia.infura.io/v3/"],
+    rpcUrls: [
+      "https://ethereum-sepolia-rpc.publicnode.com",
+      "https://rpc.sepolia.org",
+      "https://rpc2.sepolia.org",
+    ],
     blockExplorerUrls: ["https://sepolia.etherscan.io"],
   },
   holesky: {
     chainId: `0x${Number(17000).toString(16)}`,
-    chainName: "Holesky",
+    chainName: "Holesky Testnet",
     nativeCurrency: {
-      name: "holesky",
+      name: "ETH",
       symbol: "ETH",
       decimals: 18,
     },
-    rpcUrls: ["https://rpc.ankr.com/eth_holesky"],
-    blockExplorerUrls: ["https://holesky.etherscan.io/"],
+    rpcUrls: [
+      "https://rpc.holesky.ethpandaops.io",
+      "https://ethereum-holesky-rpc.publicnode.com",
+      "https://holesky.gateway.tenderly.co",
+    ],
+    blockExplorerUrls: ["https://holesky.etherscan.io"],
   },
   polygon_mumbai: {
     chainId: `0x${Number(80001).toString(16)}`,
@@ -118,20 +126,38 @@ const networks = {
 const changeNetwork = async ({ networkName }) => {
   try {
     if (!window.ethereum) throw new Error("No crypto wallet found");
-    await window.ethereum.request({
-      method: "wallet_addEthereumChain",
-      params: [
-        {
-          ...networks[networkName],
-        },
-      ],
-    });
+    
+    // First, try to switch to the network if it already exists
+    try {
+      await window.ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: networks[networkName].chainId }],
+      });
+      console.log(`✅ Switched to ${networkName} network`);
+    } catch (switchError) {
+      // This error code means the chain has not been added to MetaMask
+      if (switchError.code === 4902) {
+        console.log(`Adding ${networkName} network to MetaMask...`);
+        await window.ethereum.request({
+          method: "wallet_addEthereumChain",
+          params: [
+            {
+              ...networks[networkName],
+            },
+          ],
+        });
+        console.log(`✅ Added and switched to ${networkName} network`);
+      } else {
+        throw switchError;
+      }
+    }
   } catch (error) {
-    console.log(error.message);
+    console.error("Network switch error:", error.message);
+    throw error;
   }
 };
 
-export const handleNetworkSwitch = async (networkName = "holesky") => {
+export const handleNetworkSwitch = async (networkName = "sepolia") => {
   await changeNetwork({ networkName });
 };
 
