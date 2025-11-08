@@ -9,8 +9,8 @@ const SideBar = () => {
           <a href="javascript:void(0);" className="tx-close"></a>
         </div>
         <nav className="side-mobile-menu">
-          <a href="/" className=" mb-30">
-            YieldFlow
+          <a href="/" className="header__logo mb-30">
+            <img src="assets/img/logo/logo.svg" alt="Logo" />
           </a>
           <div className="header-mobile-search">
             <form action="#" role="search">

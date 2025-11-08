@@ -51,17 +51,19 @@ const Header = ({
 
   return (
     <header className="site-header header--transparent ico-header">
-      <div className="header__main-wrap flex flex-row-center">
+      <div className="header__main-wrap flex ">
         <div className="container mxw_1640">
           <div className="header__main ul_li_between">
             <div className="header__left ul_li">
               <div className="header__logo">
-                <a href="/">YieldFlow</a>
+                <a href="/">
+                  <img src="assets/img/logo/logo.svg" alt="Logo" srcSet="" />
+                </a>
               </div>
             </div>
 
-            <div className="main-menu__wrap ul_li navbar navbar-expand-xl flex">
-              <nav className="main-menu__nav navbar-collapse flex">
+            <div className="main-menu__wrap ul_li navbar navbar-expand-xl ">
+              <nav className="main-menu collapse navbar-collapse ">
                 <ul
                   style={{ display: "flex", flexDirection: "row", gap: "2rem" }}
                 >
