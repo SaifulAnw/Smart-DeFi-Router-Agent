@@ -39,6 +39,57 @@ The **Smart DeFi Router Agent** is an AI-guided, non-custodial DeFi vault that a
 - 📊 **Multi-Protocol**: Supports Aave, Curve, Yearn, Arc protocols, and more
 - 🛡️ **Security-First**: ReentrancyGuard, Pausable, access controls
 
+### ⚙️ Dependencies and Installation
+
+This project is built using Foundry for smart contract development and testing (Solidity). Router Contract relies on several standard libraries.
+
+### Contract Dependencies
+Make sure your OpenZeppelin dependencies are installed:
+
+- `@openzeppelin/contracts/token/ERC20/IERC20.sol`
+- `@openzeppelin/contracts/access/Ownable.sol`
+- `@openzeppelin/contracts/utils/ReentrancyGuard.sol`
+- `@openzeppelin/contracts/utils/Pausable.sol`
+- `@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol` (Used for `safeTransferFrom`)
+
+### Tools
+Make sure you have Foundry (Forge & Cast) installed:
+```bash
+curl -L [https://foundry.sh](https://foundry.sh) | bash
+foundryup
+```
+---
+### 🏗️ Deployment Router
+
+The `SmartDeFiRouterAgent` contract requires three addresses as constructor arguments. Ensure these addresses are valid on the Arc Testnet.
+
+### Constructor Arguments
+
+| Variable | Type | Description |
+| :--- | :--- | :--- |
+| `$USDC_ADDRESS` | `address` | The USDC (ERC20) token address managed by the Router. |
+| `$KEEPER_ADDRESS` | `address` | The address responsible for running maintenance functions (harvest, rebalance). |
+| `$PUBLIC_ADDRESS` | `address` | The multi-sig address or primary contract owner. |
+
+### Deployment Command
+
+To ensure successful deployment and address gas or dry run issues, use a single-line command with the `--broadcast` flag and a high gas limit.
+
+
+**IMPORTANT:** Export all environment variables before running this command.
+```bash
+forge create src/SmartDeFiRouterAgent.sol:SmartDeFiRouterAgent \
+    --rpc-url $RPC_URL_ARC_TESTNET \
+    --private-key $PRIVATE_KEY \
+    --constructor-args $USDC_ADDRESS $KEEPER_ADDRESS $PUBLIC_ADDRESS \
+    --broadcast --gas-limit 5000000 
+```
+###### After success, grab the NEW Contract Address from the transaction output.
+###### Save it as a variable for future interactions:
+```bash
+export ROUTER_ADDRESS="0x[NewRouterContractAddress]"
+```
+
 ---
 
 ## 📡 Current Deployment Status
@@ -149,6 +200,43 @@ This project implements **100% of the Product Requirements Document (PRD) v1.0**
 3. **Keeper executes rebalancing** → Withdraws from old protocol, deploys to new
 4. **Cross-chain deployment** → Uses Circle CCTP for native USDC transfers
 5. **Users withdraw anytime** → Funds returned to user wallet
+
+### 🧪 Interaction: USDC Deposit
+
+To make a deposit, you must follow a strict sequence:
+
+#### 1. Check Balance and Allowance
+
+Make sure your wallet has sufficient USDC balance and that you have given adequate permission (`allowance`) to the **Router address**.
+
+```bash
+# Check Your USDC Balance
+cast call $USDC_ADDRESS “balanceOf(address)(uint256)” $SENDER_ADDRESS --rpc-url $RPC_URL_ARC_TESTNET
+
+# Check Allowance to Router
+cast call $USDC_ADDRESS “allowance(address,address)(uint256)” $SENDER_ADDRESS $ROUTER_ADDRESS --rpc-url $RPC_URL_ARC_TESTNET
+```
+
+#### 2. Grant Approval to the Router (The Correct Spender)
+
+Since the `depositUsdc` function in the Router calls `USDC.safeTransferFrom(msg.sender, address(this), amount)`, the Router (`$ROUTER\_ADDRESS`) is the spender that must be approved.
+```bash
+# Example approval for 10 USDC (with 6 decimals)
+APPROVAL_AMOUNT=10000000 
+
+cast send $USDC_ADDRESS "approve(address,uint256)" $ROUTER_ADDRESS $APPROVAL_AMOUNT \
+  --rpc-url $RPC_URL_ARC_TESTNET --private-key $PRIVATE_KEY
+```
+
+#### 3. Execute the Deposit
+Call the `depositUsdc` function on the Router.
+```bash
+# Example deposit of 1 USDC (1,000,000)
+cast send $ROUTER_ADDRESS "depositUsdc(uint256)" 1000000 \
+  --rpc-url $RPC_URL_ARC_TESTNET --private-key $PRIVATE_KEY
+```
+🔒 Important Debugging Note
+The Router function has been revised with best practices to check the return value of the Adapter (`require(success, "Router: adapter deposit failed")`). This ensures that any current failure will indicate an internal issue in the Adapter, rather than an external allowance or balance problem, and will provide a clear revert message.
 
 ---
 
