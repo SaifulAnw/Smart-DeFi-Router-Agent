@@ -14,6 +14,8 @@ import Loader from "./Loader";
 import Team from "./Team";
 import Features from "./Features";
 import TokenInfo from "./TokenInfo";
+import AgentDashboard from "./AgentDashboard";
+import RouteOptimizer from "./RouteOptimizer";
 
 // Model
 import Popup from "./Popup";
@@ -40,6 +42,8 @@ export {
   Team,
   Features,
   TokenInfo,
+  AgentDashboard,
+  RouteOptimizer,
   // Model
   Popup,
   TransferCurrency,

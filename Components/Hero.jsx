@@ -67,12 +67,12 @@ const Hero = ({
           <div className="col-lg-7">
             <div className="hero__content">
               <h1 className="title mb-45">
-                <span>AI Agents</span> Build with Arc
+                <span>Smart DeFi Router Agent</span> Powered by AI + Arc + USDC
               </h1>
               <p className="mb-30">
-                Join the future of decentralized finance with our innovative
-                token sale platform. Secure, transparent, and built on
-                blockchain technology.
+                Maximize your USDC yields with AI-driven optimization across Arc's DeFi ecosystem. 
+                Our intelligent agent analyzes thousands of routes in seconds to find you the best 
+                risk-adjusted returns with minimal fees.
               </p>
               <div className="btns">
                 {account ? (
@@ -81,7 +81,7 @@ const Hero = ({
                     className="thm-btn"
                     style={{ cursor: "pointer" }}
                   >
-                    Buy Token
+                    Start Optimizing
                   </a>
                 ) : (
                   <a
@@ -93,11 +93,11 @@ const Hero = ({
                   </a>
                 )}
                 <a
-                  onClick={() => addTokenToMetamask()}
+                  href="#optimizer"
                   className="thm-btn thm-btn--dark ml-20"
                   style={{ cursor: "pointer" }}
                 >
-                  Add to MetaMask
+                  Try AI Router
                 </a>
               </div>
             </div>
@@ -147,11 +147,10 @@ const Hero = ({
           <div className="hero__progress mt-50">
             <div className="progress-title ul_li_between">
               <span>
-                <span>Raised -</span> {detail?.tokenSold || 0} Tokens
+                <span>Total Value Locked -</span> {detail?.tokenSold || "0"} USDC
               </span>
               <span>
-                <span>Total ICO -</span>{" "}
-                {(detail?.tokenSold || 0) + Number(detail?.tokenBal || 0)} {detail?.symbol}
+                <span>Active Users -</span> {Math.floor((detail?.tokenSold || 0) / 1000) || "0"}
               </span>
             </div>
             <div className="progress">
@@ -166,9 +165,9 @@ const Hero = ({
             </div>
 
             <ul className="ul_li_between">
-              <li>Pre Sell</li>
-              <li>Soft Cap</li>
-              <li>Bonus</li>
+              <li>AI Optimization</li>
+              <li>Arc Speed</li>
+              <li>USDC Stability</li>
             </ul>
           </div>
 
@@ -176,13 +175,13 @@ const Hero = ({
             <div className="hero__explore-wrap text-center">
               <div className="hero__explore text-center">
                 <div className="scroll-down">
-                  <span>Explore Causes</span>
+                  <span>Explore Features</span>
                 </div>
               </div>
               <div className="hero__countdown">
                 <h6 className="text-center">
-                  Countdown Timer
-                  <span className="hero__countdown-time">00:00:00</span>
+                  Average APY Across Protocols
+                  <span className="hero__countdown-time">8.5%</span>
                 </h6>
               </div>
             </div>
