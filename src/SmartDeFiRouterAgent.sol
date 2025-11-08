@@ -7,8 +7,6 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
-using SafeERC20 for IERC20;
-
 /**
  * @title IProtocolAdapter
  * @notice Interface for DeFi protocol integrations
@@ -76,11 +74,11 @@ interface IMessageTransmitter {
  * - Protocol adapter pattern for modularity
  * - Keeper-based execution model
  */
+    
 contract SmartDeFiRouterAgent is Ownable, ReentrancyGuard, Pausable {
+    using SafeERC20 for IERC20;
     
     // ============ State Variables (PRD Section 5) ============
-    
-    /// @notice User balances (deposits - withdrawals)
     mapping(address => uint256) public balances;
     
     /// @notice Total USDC deposited in the vault
@@ -262,29 +260,50 @@ contract SmartDeFiRouterAgent is Ownable, ReentrancyGuard, Pausable {
         nonReentrant 
         whenNotPaused 
     {
-        if (amount == 0) revert InvalidAmount(); 
+        if (amount == 0) revert InvalidAmount();
 
-        // 1. Transfer USDC from user to Router (Router receives funds) [cite: 40, 41]
-        require(
-            USDC.transferFrom(msg.sender, address(this), amount),
-            "Router: deposit transferFrom failed"
-        ); 
+        // Pull tokens from user to router (uses SafeERC20)
+        USDC.safeTransferFrom(msg.sender, address(this), amount);
 
-        // 2. Update accounting (State change first) [cite: 42]
+        // Update accounting (state change first)
         balances[msg.sender] += amount;
-        totalDeposits += amount; 
+        totalDeposits += amount;
 
-        // 3. Deploy to current protocol (Pull/Adapter pattern)
+        // Deploy to current protocol (approve -> adapter.pull pattern)
         if (currentProtocol != address(0)) {
             require(currentProtocol.code.length > 0, "CURRENT_NOT_CONTRACT");
-            USDC.approve(currentProtocol, 0);
+
+            // Reset allowance then set exact allowance
+            USDC.approve(currentProtocol, 0); // Reset allowance
             USDC.approve(currentProtocol, amount);
-            IProtocolAdapter(currentProtocol).deposit(amount, "");
+
+            // Call adapter and ensure it returns success
+            bool success = IProtocolAdapter(currentProtocol).deposit(amount, "");
+            require(success, "Router: adapter deposit failed");
+
+            // Track allocation and clear allowance for safety
             protocols[currentProtocol].totalAllocated += amount;
+            USDC.approve(currentProtocol, 0);
         }
-        
-        emit Deposit(msg.sender, amount, balances[msg.sender], block.timestamp); // [cite: 44]
-    }
+
+        emit Deposit(msg.sender, amount, balances[msg.sender], block.timestamp);
+    }  //     function depositUsdc(uint256 amount) external {
+//     require(amount > 0, "Invalid amount");
+
+//     // Transfer USDC dari user ke router
+//     usdc.transferFrom(msg.sender, address(this), amount);
+    
+//     // Panggil adapter deposit
+//     currentProtocol.deposit(amount, "");
+    
+//     // Update user balance dan total value locked
+//     userBalances[msg.sender] += amount;
+//     totalValueLocked += amount;
+// }
+//     /**
+   
+    
+
     
     /**
      * @notice Withdraw USDC from the vault
