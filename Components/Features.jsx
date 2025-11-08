@@ -140,15 +140,53 @@ const Features = () => {
 
       <style jsx>{`
         .features {
-          background: #ffffff;
+          background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .features::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: 
+            radial-gradient(circle at 80% 20%, rgba(102, 126, 234, 0.15) 0%, transparent 50%),
+            radial-gradient(circle at 20% 80%, rgba(118, 75, 162, 0.15) 0%, transparent 50%);
+          pointer-events: none;
+        }
+
+        .features .container {
+          position: relative;
+          z-index: 1;
+        }
+
+        .sec-title__subtitle {
+          color: #ffd700 !important;
+          font-weight: 600;
+        }
+
+        .sec-title__title {
+          color: #ffffff !important;
+          text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .sec-title__text {
+          color: #d0d0d0 !important;
+          font-size: 16px;
+          margin-top: 10px;
         }
 
         .feature-card {
-          background: #fff;
+          background: rgba(255, 255, 255, 0.05);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 15px;
           padding: 35px 25px;
           margin-bottom: 30px;
-          box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+          box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
           border-top: 4px solid #667eea;
           transition: all 0.3s ease;
           height: calc(100% - 30px);
@@ -156,7 +194,9 @@ const Features = () => {
 
         .feature-card:hover {
           transform: translateY(-10px);
-          box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+          background: rgba(255, 255, 255, 0.08);
+          box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+          border-color: rgba(255, 215, 0, 0.3);
         }
 
         .feature-card__icon {
@@ -169,17 +209,18 @@ const Features = () => {
           font-size: 32px;
           color: #fff;
           margin-bottom: 20px;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         }
 
         .feature-card__title {
           font-size: 20px;
           font-weight: 700;
           margin-bottom: 15px;
-          color: #1a1a1a;
+          color: #ffffff;
         }
 
         .feature-card__description {
-          color: #666;
+          color: #d0d0d0;
           line-height: 1.7;
           margin: 0;
           font-size: 14px;
@@ -190,15 +231,18 @@ const Features = () => {
           padding: 60px 40px;
           border-radius: 20px;
           color: #fff;
+          box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
         }
 
         .competitive-advantage .sec-title__title {
-          color: #fff;
+          color: #fff !important;
+          text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
 
         .advantage-table {
-          background: rgba(255, 255, 255, 0.1);
+          background: rgba(255, 255, 255, 0.15);
           backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
           border-radius: 15px;
           padding: 30px;
           overflow-x: auto;
@@ -213,17 +257,19 @@ const Features = () => {
         .advantage-table td {
           padding: 20px;
           text-align: left;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.15);
         }
 
         .advantage-table th {
           font-weight: 700;
           font-size: 16px;
           background: rgba(255, 255, 255, 0.1);
+          color: #ffffff;
         }
 
         .advantage-table td {
           font-size: 14px;
+          color: #f0f0f0;
         }
 
         .advantage-table tr:last-child td {
@@ -236,10 +282,15 @@ const Features = () => {
         }
 
         .advantage-table tbody tr:hover {
-          background: rgba(255, 255, 255, 0.05);
+          background: rgba(255, 255, 255, 0.08);
         }
 
         @media (max-width: 768px) {
+          .features {
+            padding-top: 80px !important;
+            padding-bottom: 60px !important;
+          }
+
           .competitive-advantage {
             padding: 40px 20px;
           }

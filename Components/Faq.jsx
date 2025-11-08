@@ -103,6 +103,46 @@ const Faq = () => {
       </section>
 
       <style jsx>{`
+        .faq {
+          background: linear-gradient(135deg, #16213e 0%, #0f0f23 50%, #1a1a2e 100%);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .faq::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: 
+            radial-gradient(circle at 30% 40%, rgba(102, 126, 234, 0.12) 0%, transparent 50%),
+            radial-gradient(circle at 70% 60%, rgba(118, 75, 162, 0.12) 0%, transparent 50%);
+          pointer-events: none;
+        }
+
+        .faq .container {
+          position: relative;
+          z-index: 1;
+        }
+
+        .sec-title__subtitle {
+          color: #ffd700 !important;
+          font-weight: 600;
+        }
+
+        .sec-title__title {
+          color: #ffffff !important;
+          text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .sec-title__text {
+          color: #d0d0d0 !important;
+          font-size: 16px;
+          margin-top: 10px;
+        }
+
         .faq__wrap {
           max-width: 900px;
           margin: 50px auto 0;
@@ -115,16 +155,19 @@ const Faq = () => {
         }
 
         .accordion {
-          background: #fff;
-          border-radius: 10px;
+          background: rgba(255, 255, 255, 0.05);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 15px;
           margin-bottom: 15px;
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
           overflow: hidden;
           transition: all 0.3s ease;
         }
 
         .accordion:hover {
-          box-shadow: 0 5px 20px rgba(0, 0, 0, 0.12);
+          box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+          background: rgba(255, 255, 255, 0.08);
         }
 
         .acc-btn {
@@ -132,7 +175,7 @@ const Faq = () => {
           cursor: pointer;
           font-weight: 600;
           font-size: 16px;
-          color: #1a1a1a;
+          color: #ffffff;
           display: flex;
           align-items: center;
           gap: 15px;
@@ -146,8 +189,13 @@ const Faq = () => {
           right: 25px;
           font-size: 24px;
           font-weight: 700;
-          color: #667eea;
+          color: #ffd700;
           transition: transform 0.3s ease;
+        }
+
+        .active-block {
+          background: rgba(255, 255, 255, 0.08);
+          border-color: rgba(255, 215, 0, 0.3);
         }
 
         .active-block .acc-btn {
@@ -168,17 +216,19 @@ const Faq = () => {
           border-radius: 5px;
           font-size: 14px;
           font-weight: 700;
+          box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
         }
 
         .active-block .acc-btn span {
-          background: #fff;
-          color: #667eea;
+          background: #ffd700;
+          color: #000;
         }
 
         .acc_body {
           max-height: 0;
           overflow: hidden;
           transition: max-height 0.3s ease;
+          background: rgba(0, 0, 0, 0.2);
         }
 
         .acc_body.current {
@@ -190,18 +240,18 @@ const Faq = () => {
         }
 
         .content p {
-          color: #666;
+          color: #e0e0e0;
           line-height: 1.8;
           margin: 0;
-        }
-
-        .sec-title__text {
-          color: #666;
-          font-size: 16px;
-          margin-top: 10px;
+          font-size: 15px;
         }
 
         @media (max-width: 768px) {
+          .faq {
+            padding-top: 80px !important;
+            padding-bottom: 60px !important;
+          }
+
           .acc-btn {
             font-size: 14px;
             padding: 15px 20px;

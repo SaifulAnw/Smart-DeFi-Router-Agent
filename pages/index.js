@@ -67,7 +67,7 @@ const index = () => {
     const fetchData = async () => {
       try {
         // Only fetch if we have access to window and ethereum
-        if (typeof window !== 'undefined' && window.ethereum) {
+        if (typeof window !== "undefined" && window.ethereum) {
           const items = await TOKEN_ICO();
           console.log("Items:", items);
           if (items) {
@@ -183,7 +183,7 @@ const index = () => {
         <About />
         <Features />
         <RouteOptimizer setLoader={setLoader} />
-        <AgentDashboard 
+        <AgentDashboard
           routerData={{
             totalValueLocked: detail?.tokenSold || "0",
             averageYield: "8.5",
@@ -192,18 +192,33 @@ const index = () => {
             autoRebalance: true,
             lastRebalance: "2 days ago",
             rebalanceThreshold: "5",
-            totalEarned: "245.50"
+            totalEarned: "245.50",
           }}
           userPositions={[]}
           protocols={[
-            { name: "Arc Lending Protocol", isActive: true, yield: 8.5, risk: 25, tvl: 45 },
-            { name: "Arc Staking Pool", isActive: true, yield: 7.2, risk: 30, tvl: 32 },
-            { name: "Arc Liquidity Pool", isActive: true, yield: 9.1, risk: 45, tvl: 28 }
+            {
+              name: "Arc Lending Protocol",
+              isActive: true,
+              yield: 8.5,
+              risk: 25,
+              tvl: 45,
+            },
+            {
+              name: "Arc Staking Pool",
+              isActive: true,
+              yield: 7.2,
+              risk: 30,
+              tvl: 32,
+            },
+            {
+              name: "Arc Liquidity Pool",
+              isActive: true,
+              yield: 9.1,
+              risk: 45,
+              tvl: 28,
+            },
           ]}
         />
-        <Token />
-        <TokenInfo detail={detail} />
-        <Team />
         <Faq />
         <Contact />
         <Footer />

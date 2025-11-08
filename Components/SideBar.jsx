@@ -32,13 +32,18 @@ const SideBar = () => {
               </a>
             </li>
             <li>
-              <a className="scrollspy-btn" href="#roadmap">
-                Roadmap
+              <a className="scrollspy-btn" href="#feature">
+                Feature
               </a>
             </li>
             <li>
-              <a className="scrollspy-btn" href="#team">
-                Team
+              <a className="scrollspy-btn" href="#airouter">
+                AI Router
+              </a>
+            </li>
+            <li>
+              <a className="scrollspy-btn" href="#dashboard">
+                Dashboard
               </a>
             </li>
             <li>

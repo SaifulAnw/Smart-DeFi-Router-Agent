@@ -117,7 +117,43 @@ const About = () => {
 
       <style jsx>{`
         .about {
-          background: #f8f9fa;
+          background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .about::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: 
+            radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.1) 0%, transparent 50%);
+          pointer-events: none;
+        }
+
+        .about .container {
+          position: relative;
+          z-index: 1;
+        }
+
+        .sec-title__subtitle {
+          color: #ffd700 !important;
+          font-weight: 600;
+        }
+
+        .sec-title__title {
+          color: #ffffff !important;
+          text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .about__content p {
+          color: #e0e0e0 !important;
+          line-height: 1.8;
+          font-size: 16px;
         }
 
         .about__content {
@@ -134,33 +170,39 @@ const About = () => {
           gap: 20px;
           margin-bottom: 25px;
           padding: 20px;
-          background: #fff;
-          border-radius: 10px;
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+          background: rgba(255, 255, 255, 0.05);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 15px;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
           transition: all 0.3s ease;
         }
 
         .feature-item:hover {
           transform: translateY(-5px);
-          box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+          background: rgba(255, 255, 255, 0.08);
+          box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+          border-color: rgba(255, 215, 0, 0.3);
         }
 
         .feature-icon {
           font-size: 40px;
-          color: #667eea;
+          color: #ffd700;
           flex-shrink: 0;
         }
 
         .feature-content h4 {
           margin: 0 0 8px;
           font-size: 18px;
-          color: #1a1a1a;
+          color: #ffffff;
+          font-weight: 700;
         }
 
         .feature-content p {
           margin: 0;
-          color: #666;
+          color: #d0d0d0 !important;
           font-size: 14px;
+          line-height: 1.6;
         }
 
         .about__pillars {
@@ -168,6 +210,7 @@ const About = () => {
           padding: 40px;
           border-radius: 20px;
           color: #fff;
+          box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
         }
 
         .pillars-title {
@@ -175,11 +218,14 @@ const About = () => {
           font-size: 28px;
           margin-bottom: 30px;
           font-weight: 700;
+          color: #ffffff;
+          text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
 
         .pillar-card {
-          background: rgba(255, 255, 255, 0.1);
+          background: rgba(255, 255, 255, 0.15);
           backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
           border-radius: 15px;
           padding: 25px;
           margin-bottom: 20px;
@@ -187,8 +233,9 @@ const About = () => {
         }
 
         .pillar-card:hover {
-          background: rgba(255, 255, 255, 0.15);
+          background: rgba(255, 255, 255, 0.2);
           transform: translateX(5px);
+          box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
         }
 
         .pillar-header {
@@ -201,12 +248,15 @@ const About = () => {
         .pillar-header svg {
           font-size: 32px;
           color: #ffd700;
+          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
         }
 
         .pillar-header h4 {
           margin: 0;
           font-size: 20px;
           font-weight: 700;
+          color: #ffffff;
+          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
         }
 
         .pillar-content ul {
@@ -221,6 +271,7 @@ const About = () => {
           position: relative;
           font-size: 14px;
           line-height: 1.6;
+          color: #f0f0f0;
         }
 
         .pillar-content li svg {
@@ -229,6 +280,7 @@ const About = () => {
           top: 12px;
           font-size: 18px;
           color: #4ade80;
+          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
         }
 
         @media (max-width: 992px) {
@@ -239,6 +291,22 @@ const About = () => {
 
           .about__pillars {
             padding: 30px 20px;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .about {
+            padding-top: 80px !important;
+            padding-bottom: 60px !important;
+          }
+
+          .feature-item {
+            flex-direction: column;
+            text-align: center;
+          }
+
+          .feature-icon {
+            font-size: 50px;
           }
         }
       `}</style>
